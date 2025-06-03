@@ -1,10 +1,10 @@
 /** npm imports */
 import { Module } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config'
 
 /** local imports */
 import { HealthModule } from './health/health.module'
-import config from './config/config';
+import config from './config/config'
 
 @Module({
   imports: [
