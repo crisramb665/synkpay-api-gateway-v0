@@ -1,0 +1,11 @@
+{
+  "release-type": "node",
+  "package-name": "synkpay-api-gateway-v0",
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "changelog-types": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "docs", "section": "Documentation" }
+  ]
+}
