@@ -18,11 +18,14 @@ jobs:
         id: release
         with:
           release-type: 'node'
-          package-name: 'synkpay-api-gateway-v0'
+          package-name: 'synkpay-api-gateway'
           changelog-types: |
             [
               {"type": "feat", "section": "Features"},
-              {"type": "fix", "section": "Bug Fixes"}
+              {"type": "fix", "section": "Bug Fixes"},
+              {"type": "test", "section": "Tests"},
+              {"type": "build", "section": "Build System"},
+              {"type": "chore", "section": "Chores"}
             ]
           bump-minor-pre-major: true
           token: ${{ secrets.GITHUB_TOKEN }}
