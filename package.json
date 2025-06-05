@@ -1,8 +1,13 @@
 {
   "name": "synkpay-api-gateway",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "Synk Pay API Gateway",
+  "keywords": [
+    "nestjs",
+    "api-gateway",
+    "synkpay"
+  ],
+  "author": "Novatide Labs",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
