@@ -32,4 +32,4 @@ jobs:
               {"type": "chore", "section": "Chores"}
             ]
           bump-minor-pre-major: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PAT }}
