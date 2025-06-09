@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 
 /** local imports */
-import { AppModule } from './app.module'
+import { AppModule } from './app/app.module'
 
 async function bootstrap(): Promise<void> {
   try {
