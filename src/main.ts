@@ -33,6 +33,7 @@ async function bootstrap(): Promise<void> {
 
     await app.listen(port)
     console.log(`🚀🚀🚀 Application is running on: http://localhost:${port}`)
+    console.log(`🚀🚀🚀 Application with GraphQL is running on: http://localhost:${port}/graphql`)
   } catch (error: unknown) {
     if (error instanceof Error) console.error('Error during bootstrap:', error.message)
     else console.error('Error during bootstrap:', error)
