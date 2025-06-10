@@ -9,6 +9,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
 /** local imports */
 import { HealthModule } from '../health/health.module'
 import config from '../config/config'
+import { AuthModule } from '../microservices/auth/auth.module'
 
 const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 
@@ -27,6 +28,7 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
     }),
     HealthModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],

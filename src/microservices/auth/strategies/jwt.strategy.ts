@@ -1,0 +1,35 @@
+/** npm imports */
+import { Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { PassportStrategy } from '@nestjs/passport'
+import { ExtractJwt, Strategy } from 'passport-jwt'
+
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(configService: ConfigService) {
+    const publicKey = configService.get<string>('JWT_PUBLIC_KEY_DEV')
+    if (!publicKey) throw new Error('JWT public key is not defined in environment variables')
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    super({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: publicKey,
+      algorithms: ['RS256'],
+      ignoreExpiration: false,
+    })
+  }
+
+  //! The following is not required for the JWT strategy, but is useful for debugging for now
+  private static formatPublicKey(key: string): string {
+    return key.replace(/\\n/g, '\n')
+  }
+
+  public validate(payload: any) {
+    return {
+      userId: payload.sub,
+      email: payload.email,
+      roles: payload.roles,
+    }
+  }
+}
