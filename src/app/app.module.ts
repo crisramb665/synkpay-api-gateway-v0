@@ -5,13 +5,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { GraphQLModule } from '@nestjs/graphql'
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default'
-import { ThrottlerModule } from '@nestjs/throttler'
+import { ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
 
 /** local imports */
 import { HealthModule } from '../health/health.module'
 import config from '../config/config'
-import { CustomRateLimiterGuard } from '../rate-limit/rate-limit-custom.guard'
+import { GqlThrottlerGuard } from '../rate-limit/rate-limit-custom.guard'
 
 const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 
@@ -28,13 +28,22 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
       graphiql: false,
       playground: false,
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      context: ({ req, res }) => ({ req, res }),
     }),
     ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ([{
-        ttl: (configService.get<number>('RATE_LIMIT_WINDOW_SEC') ?? 60), 
-        limit: configService.get<number>('RATE_LIMIT_GLOBAL') ?? 10,
-      }]),
+      useFactory: (configService: ConfigService): ThrottlerModuleOptions => {
+        return {
+          throttlers: [
+            {
+              ttl: configService.get<number>('RATE_LIMIT_WINDOW_SEC') || 60000,
+              limit: configService.get<number>('RATE_LIMIT_GLOBAL') || 10,
+            },
+          ],
+        }
+      },
     }),
     HealthModule,
   ],
@@ -42,7 +51,7 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
   providers: [
     {
       provide: APP_GUARD,
-      useClass: CustomRateLimiterGuard,
+      useClass: GqlThrottlerGuard,
     },
   ],
 })
