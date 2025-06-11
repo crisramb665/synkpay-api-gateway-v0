@@ -38,7 +38,7 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
         return {
           throttlers: [
             {
-              ttl: configService.get<number>('RATE_LIMIT_WINDOW_SEC') || 60000,
+              ttl: configService.get<number>('RATE_LIMIT_WINDOW_MS') || 60000,
               limit: configService.get<number>('RATE_LIMIT_GLOBAL') || 10,
             },
           ],
