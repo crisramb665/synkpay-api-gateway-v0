@@ -10,9 +10,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const publicKey = configService.get<string>('JWT_PUBLIC_KEY_DEV')
     if (!publicKey) throw new Error('JWT public key is not defined in environment variables')
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     super({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       secretOrKey: publicKey,
       algorithms: ['RS256'],

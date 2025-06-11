@@ -8,3 +8,9 @@ export interface JwtPayload {
   iat: number
   exp: number
 }
+
+export interface LoginResponse {
+  accessToken: string
+  sdkFinanceRefreshToken: string
+  expiresAt: string
+}

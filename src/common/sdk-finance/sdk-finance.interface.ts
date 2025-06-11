@@ -37,5 +37,10 @@ export interface AuthResponse {
   authorizationToken: AuthToken
   refreshToken: AuthToken
   members: Member[]
-  maskedPhoneNumber: string
+  maskedPhoneNumber?: string
+}
+
+export interface AuthResponseWithStatus {
+  status: number
+  data: AuthResponse
 }
