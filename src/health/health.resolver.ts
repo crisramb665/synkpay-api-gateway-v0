@@ -1,7 +1,6 @@
 /** npm imports */
 import { ConfigService } from '@nestjs/config'
 import { Query, Resolver } from '@nestjs/graphql'
-import { Throttle } from '@nestjs/throttler'
 
 @Resolver()
 export class HealthResolver {
