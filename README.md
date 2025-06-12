@@ -115,6 +115,27 @@ JWT_SECRET=your_jwt_secret
 
 ---
 
+## 🚦 Rate Limiting
+
+Rate limiting is implemented using a custom `GqlThrottlerGuard` based on NestJS's `@nestjs/throttler` package. It protects GraphQL endpoints from abuse by limiting the number of requests per user/IP within a configured time window.
+
+🔧 Configuration:
+
+Limits are defined globally via environment variables: Currently, default values ​​are seen until the final real values ​​are available.
+
+```env
+RATE_LIMIT_GLOBAL=100           # Max requests per window
+RATE_LIMIT_WINDOW_MS=60000      # Window duration in milliseconds
+
+These values are injected using ThrottlerModule.forRootAsync() inside AppModule.
+
+⚙️ How It Works
+The global guard uses the client's IP address to track and throttle requests. The logic is extended to work with GraphQL using GqlExecutionContext to extract req and res objects. To override the global rate limit for specific GraphQL resolvers, use the @Throttle() decorator
+
+Requests that exceed the allowed rate will receive a 429 Too Many Requests error.
+
+---
+
 ## 📬 Contact
 
 - Maintainer: [Novatide Labs](https://github.com/aialphanovatide)
