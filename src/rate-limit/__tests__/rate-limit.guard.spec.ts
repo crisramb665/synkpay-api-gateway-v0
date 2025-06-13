@@ -59,7 +59,6 @@ describe('GqlThrottlerGuard', () => {
 
     // Create the guard instance with mocks
     guard = new GqlThrottlerGuard(mockOptions, mockStorageService, mockReflector)
-    console.log('GUARD CREATED:', guard)
 
     // MOCK IP for getTracker
     ;(guard as unknown as { getTracker: () => Promise<string> }).getTracker = jest
@@ -70,7 +69,6 @@ describe('GqlThrottlerGuard', () => {
 
     // Initialize the guard
     await guard.onModuleInit()
-    console.log('this.throttlers after init:', (guard as unknown as { throttlers: any[] }).throttlers)
   })
 
   // Unit test No. 1 -> Check if the guard is applied to the correct context.
@@ -88,7 +86,6 @@ describe('GqlThrottlerGuard', () => {
     jest.spyOn(GqlExecutionContext, 'create').mockReturnValueOnce(gqlContext as GqlExecutionContext)
 
     const result = guard.getRequestResponse(executionContext)
-    console.log('Guard instance in test 1:', guard)
 
     expect(result.req).toBe(mockReq)
     expect(result.res).toBe(mockRes)
@@ -113,12 +110,7 @@ describe('GqlThrottlerGuard', () => {
       ttl: 60000,
     })
 
-    console.log('Guard instance in test 2:', guard)
-    console.log('this.throttlers (inside test 2):', (guard as unknown as { throttlers: any[] }).throttlers)
-    console.log('Calling canActivate()...')
-
     const result: boolean = await guard.canActivate(context)
-    console.log('canActivate result:', result)
 
     expect(result).toBe(true)
   })
@@ -142,8 +134,6 @@ describe('Throttle decorator metadata', () => {
 
     const limit: number | undefined = fakeReflector.get('throttler:limit', target[methodName])
     const ttl: number | undefined = fakeReflector.get('throttler:ttl', target[methodName])
-
-    console.log('Throttle metadata -> limit:', limit, 'ttl:', ttl)
 
     expect(limit).toBe(2)
     expect(ttl).toBe(30000)
