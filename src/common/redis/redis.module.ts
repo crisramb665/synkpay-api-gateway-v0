@@ -1,5 +1,7 @@
 /** npm imports */
 import { Module } from '@nestjs/common'
+
+/** local imports */
 import { RedisService } from './redis.service'
 
 @Module({

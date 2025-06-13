@@ -14,4 +14,10 @@ type Mutation {
 type Query {
   getHealth: String!
   securedQuery: String!
+  securedQuery2: SdkFinanceTokenResponseDto!
+}
+
+type SdkFinanceTokenResponseDto {
+  sdkFinanceRefreshToken: String!
+  sdkFinanceTokenAccessToken: String!
 }

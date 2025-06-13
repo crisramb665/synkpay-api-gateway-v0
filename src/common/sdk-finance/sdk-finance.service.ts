@@ -7,6 +7,17 @@ import { catchError, firstValueFrom } from 'rxjs'
 /** local imports */
 import { type AuthResponseWithStatus } from './sdk-finance.interface'
 
+interface RegistrationParams {
+  login: string
+  role: string
+  legalType: string
+  administrator: {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+  }
+}
 @Injectable()
 export class SDKFinanceService {
   private readonly baseUrl: string | undefined
@@ -16,7 +27,30 @@ export class SDKFinanceService {
     private readonly httpService: HttpService,
   ) {
     this.baseUrl = this.configService.get<string>('SDK_FINANCE_BASE_URL')
-    console.log('SDKFinanceService initialized with base URL:', this.baseUrl)
+  }
+
+  async registration({ login, role, legalType, administrator }: RegistrationParams) {
+    try {
+      if (!this.baseUrl) throw new Error('SDK Finance base URL is not defined')
+
+      const response = await firstValueFrom(
+        this.httpService.post(`${this.baseUrl}/v1/registration`, {
+          login,
+          role,
+          legalType,
+          administrator,
+        }),
+      )
+
+      console.log({ response })
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Error during register from SDK Finance:', error.message)
+      } else {
+        console.error('Error during register from SDK Finance:', error)
+      }
+      throw error
+    }
   }
 
   async authenticateUser(login: string, password: string): Promise<AuthResponseWithStatus> {

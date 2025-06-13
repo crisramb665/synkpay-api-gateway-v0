@@ -1,38 +1,48 @@
 /** npm imports */
 import { Injectable, OnModuleDestroy } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import Redis from 'ioredis'
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
-  private readonly client: Redis
+  private readonly redisClient: Redis
 
-  constructor() {
-    this.client = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
+  constructor(private readonly configService: ConfigService) {
+    this.redisClient = new Redis({
+      host: this.configService.get<string>('REDIS_HOST'),
+      port: this.configService.get<number>('REDIS_PORT'),
     })
   }
 
   async setValue(key: string, value: any, ttlSeconds?: number): Promise<void> {
-    const val = typeof value === 'string' ? value : JSON.stringify(value)
-    if (ttlSeconds) await this.client.set(key, val, 'EX', ttlSeconds)
-    else await this.client.set(key, val)
-  }
-
-  async getValue<T = string>(key: string): Promise<T | null> {
-    const value = await this.client.get(key)
-    try {
-      return value ? JSON.parse(value) : null
-    } catch {
-      return value as unknown as T
+    let val: string
+    if (typeof value === 'string') {
+      try {
+        JSON.parse(value)
+        val = value
+      } catch {
+        val = JSON.stringify(value)
+      }
+    } else {
+      val = JSON.stringify(value)
     }
+
+    if (ttlSeconds) await this.redisClient.set(key, val, 'PX', ttlSeconds)
+    else await this.redisClient.set(key, val)
   }
 
-  async del(key: string): Promise<void> {
-    await this.client.del(key)
+  async getValue(key: string) {
+    const value = await this.redisClient.get(key)
+    if (!value) return null
+
+    return value
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.redisClient.del(key)
   }
 
   async onModuleDestroy() {
-    await this.client.quit()
+    await this.redisClient.quit()
   }
 }

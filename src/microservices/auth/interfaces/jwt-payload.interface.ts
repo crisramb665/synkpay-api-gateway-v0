@@ -1,14 +1,15 @@
-// TODO: Need to check this further
+/** npm imports */
+import { IncomingMessage } from 'http'
+
 export interface JwtPayload {
   sub: string
   name: string
-  role: string
-  organizationId: string
-  sdkAccessToken?: string
-  iat: number
-  exp: number
+  profileOrganizationId: string
 }
 
+export interface ContextReq extends IncomingMessage {
+  user: JwtPayload
+}
 export interface LoginResponse {
   accessToken: string
   sdkFinanceRefreshToken: string

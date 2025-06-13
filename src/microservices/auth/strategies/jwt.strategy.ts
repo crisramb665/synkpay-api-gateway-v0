@@ -4,6 +4,9 @@ import { ConfigService } from '@nestjs/config'
 import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
 
+/** Local imports */
+import { type JwtPayload } from '../interfaces/jwt-payload.interface'
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(configService: ConfigService) {
@@ -18,16 +21,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     })
   }
 
+  public validate(payload: JwtPayload) {
+    return {
+      sub: payload.sub,
+      name: payload.name,
+      profileOrganizationId: payload.profileOrganizationId,
+    }
+  }
+
   //! The following is not required for the JWT strategy, but is useful for debugging for now
   private static formatPublicKey(key: string): string {
     return key.replace(/\\n/g, '\n')
-  }
-
-  public validate(payload: any) {
-    return {
-      userId: payload.sub,
-      email: payload.email,
-      roles: payload.roles,
-    }
   }
 }
