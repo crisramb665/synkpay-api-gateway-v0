@@ -23,6 +23,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:auth:e2e": "jest src/microservices/auth/__tests__/auth.e2e.spec.ts",
+    "test:auth:unit": "jest src/microservices/auth/__tests__/auth.service.spec.ts",
     "prettier": "prettier -w \"**/*.{ts,js}\"",
     "prettier:check": "prettier --check 'src/**/*.{ts,js,json,md}'"
   },
