@@ -42,6 +42,11 @@ export class RedisService implements OnModuleDestroy {
     await this.redisClient.del(key)
   }
 
+  async exist(key: string): Promise<boolean> {
+    const result = await this.redisClient.exists(key)
+    return result === 1
+  }
+
   async onModuleDestroy() {
     await this.redisClient.quit()
   }

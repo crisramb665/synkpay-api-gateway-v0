@@ -29,7 +29,6 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
       graphiql: false,
       playground: false,
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       context: ({ req, res }) => ({ req, res }),
     }),
     ThrottlerModule.forRootAsync({

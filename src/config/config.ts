@@ -2,6 +2,8 @@ export default () => ({
   PORT: parseInt(process.env.PORT ?? '5000', 10),
   NODE_ENV: process.env.NODE_ENV ?? 'development',
   API_KEY: process.env.API_KEY,
+  RATE_LIMIT_GLOBAL: parseInt(process.env.RATE_LIMIT_GLOBAL ?? '10', 10),
+  RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),
   SDK_FINANCE_BASE_URL: process.env.SDK_FINANCE_BASE_URL,
   JWT_PUBLIC_KEY_DEV: process.env.JWT_PUBLIC_KEY_DEV ?? '',
   JWT_PUBLIC_KEY_PROD: process.env.JWT_PUBLIC_KEY_PROD ?? '',

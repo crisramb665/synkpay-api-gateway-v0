@@ -39,10 +39,15 @@ export class AuthResolver {
   //TODO: Remove this later, it's just for testing the SDK finance token return
   async securedQuery2(@Context() context: { req: ContextReq }) {
     const user = context.req.user
-    const sdkFinanceToken = await this.authService.getSdkFinanceToken(user)
 
-    const { sdkFinanceToken: sdkFinanceTokenAccessToken, sdkFinanceRefreshToken } = sdkFinanceToken
+    try {
+      const { sdkFinanceToken: sdkFinanceTokenAccessToken, sdkFinanceRefreshToken } =
+        await this.authService.getSdkFinanceToken(user)
 
-    return { sdkFinanceTokenAccessToken, sdkFinanceRefreshToken }
+      return { sdkFinanceTokenAccessToken, sdkFinanceRefreshToken }
+    } catch (error: any) {
+      //! This is not a server error, need to fix this with refresh token implementation
+      throw new Error('SDK Finance has expired or was revoked. Please re-authenticate', error) //! This is not a server error
+    }
   }
 }

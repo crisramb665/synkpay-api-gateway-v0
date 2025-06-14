@@ -7,6 +7,7 @@ import { SDKFinanceService } from '../../common/sdk-finance/sdk-finance.service'
 import { type AuthResponseWithStatus } from '../../common/sdk-finance/sdk-finance.interface'
 import { type JwtPayload, type LoginResponse } from './interfaces/jwt-payload.interface'
 import { RedisService } from '../../common/redis/redis.service'
+import { hashJwt } from './utils/utils'
 
 @Injectable()
 export class AuthService {
@@ -39,13 +40,17 @@ export class AuthService {
       }
 
       const accessToken = this.jwtService.sign(payload)
+      const accessTokenHash = hashJwt(accessToken)
 
-      const redisKey = `sdkFinanceToken:${userId}`
+      const redisKey = `session:${userId}`
+
       await this.redisService.setValue(
         redisKey,
         {
           sdkFinanceToken: data.authorizationToken.token,
           sdkFinanceRefreshToken: data.refreshToken.token,
+          sdkFinanceTokenExpiresAt: expiresAt,
+          jwtHash: accessTokenHash,
         },
         expiresIn,
       )
@@ -61,9 +66,11 @@ export class AuthService {
   }
 
   public async getSdkFinanceToken(user: JwtPayload) {
-    const redisKey = `sdkFinanceToken:${user.sub}`
+    const redisKey = `session:${user.sub}`
 
     const tokenValue = await this.redisService.getValue(redisKey)
+
+    //! This is not a server error, need to fix this with refresh token implementation
     if (!tokenValue) throw new Error('SDK Finance tokens not generated for this user.')
 
     return JSON.parse(tokenValue) as { sdkFinanceToken: string; sdkFinanceRefreshToken: string }
