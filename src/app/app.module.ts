@@ -12,6 +12,7 @@ import { APP_GUARD } from '@nestjs/core'
 import { HealthModule } from '../health/health.module'
 import config from '../config/config'
 import { GqlThrottlerGuard } from '../rate-limit/rate-limit-custom.guard'
+import { AuthModule } from '../microservices/auth/auth.module'
 
 const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 
@@ -28,7 +29,6 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
       graphiql: false,
       playground: false,
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       context: ({ req, res }) => ({ req, res }),
     }),
     ThrottlerModule.forRootAsync({
@@ -46,6 +46,7 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
       },
     }),
     HealthModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [
