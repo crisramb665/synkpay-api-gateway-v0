@@ -1,11 +1,11 @@
 /** graphql imports */
-import { GraphQLError } from 'graphql';
+import { GraphQLError } from 'graphql'
 
-/** local imports */ 
-import { ResponseError } from '../common/responses/response-error';
+/** local imports */
+import { ResponseError } from '../common/responses/response-error'
 
 export function formatGraphQLError(error: GraphQLError) {
-  const originalError = error.originalError;
+  const originalError = error.originalError
 
   if (originalError instanceof ResponseError) {
     return {
@@ -13,7 +13,7 @@ export function formatGraphQLError(error: GraphQLError) {
       code: originalError.code,
       success: originalError.success,
       timestamp: originalError.timestamp,
-    };
+    }
   }
 
   return {
@@ -21,5 +21,5 @@ export function formatGraphQLError(error: GraphQLError) {
     code: 500,
     success: false,
     timestamp: new Date().toISOString(),
-  };
+  }
 }

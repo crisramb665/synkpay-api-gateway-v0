@@ -7,17 +7,17 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default'
 import { ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER } from '@nestjs/core'
 
 /** local imports */
 import { HealthModule } from '../health/health.module'
 import config from '../config/config'
 import { GqlThrottlerGuard } from '../rate-limit/rate-limit-custom.guard'
 import { AuthModule } from '../microservices/auth/auth.module'
-import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
-import { ErrorService } from '../common/services/error.service';
-import { formatGraphQLError } from '../graphql/format-error';
-import { AppService } from './app.service';
+import { GlobalExceptionFilter } from '../common/filters/global-exception.filter'
+import { ErrorService } from '../common/services/error.service'
+import { formatGraphQLError } from '../graphql/format-error'
+import { AppService } from './app.service'
 
 const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 
