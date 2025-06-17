@@ -17,7 +17,8 @@ export class AuthResolver {
   async login(@Args('login') login: string, @Args('password') password: string): Promise<LoginResponseDto> {
     try {
       const result = await this.authService.login(login, password)
-      if (!result || !result.accessToken) throw new Error('Login failed. Please check your credentials and try again.')
+      if (!result || !result.apiGatewayAccessToken)
+        throw new Error('Login failed. Please check your credentials and try again.')
 
       return result
     } catch (error) {
@@ -47,7 +48,14 @@ export class AuthResolver {
       return { sdkFinanceTokenAccessToken, sdkFinanceRefreshToken }
     } catch (error: any) {
       //! This is not a server error, need to fix this with refresh token implementation
-      throw new Error('SDK Finance has expired or was revoked. Please re-authenticate', error) //! This is not a server error
+      throw new Error('SDK Finance has expired or was revoked. Please re-authenticate', error)
     }
+  }
+
+  @Query(() => String)
+  @UseGuards(GqlAuthGuard)
+  async securedQuery3(@Args('refreshToken') refreshToken: string) {
+    await this.authService.refreshToken(refreshToken)
+    return 'testing refresh'
   }
 }

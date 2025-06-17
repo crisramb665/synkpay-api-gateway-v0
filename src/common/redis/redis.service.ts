@@ -14,7 +14,7 @@ export class RedisService implements OnModuleDestroy {
     })
   }
 
-  async setValue(key: string, value: any, ttlSeconds?: number): Promise<void> {
+  async setValue(key: string, value: any, ttlMiliSeconds?: number): Promise<void> {
     let val: string
     if (typeof value === 'string') {
       try {
@@ -27,11 +27,11 @@ export class RedisService implements OnModuleDestroy {
       val = JSON.stringify(value)
     }
 
-    if (ttlSeconds) await this.redisClient.set(key, val, 'PX', ttlSeconds)
+    if (ttlMiliSeconds) await this.redisClient.set(key, val, 'PX', ttlMiliSeconds)
     else await this.redisClient.set(key, val)
   }
 
-  async getValue(key: string) {
+  async getValue(key: string): Promise<string | null> {
     const value = await this.redisClient.get(key)
     if (!value) return null
 
@@ -47,7 +47,7 @@ export class RedisService implements OnModuleDestroy {
     return result === 1
   }
 
-  async onModuleDestroy() {
+  async onModuleDestroy(): Promise<void> {
     await this.redisClient.quit()
   }
 }

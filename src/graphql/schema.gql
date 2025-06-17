@@ -3,7 +3,8 @@
 # ------------------------------------------------------
 
 type LoginResponseDto {
-  accessToken: String!
+  apiGatewayAccessToken: String!
+  apiGatewayRefreshToken: String!
   expiresAt: String!
 }
 
@@ -15,6 +16,7 @@ type Query {
   getHealth: String!
   securedQuery: String!
   securedQuery2: SdkFinanceTokenResponseDto!
+  securedQuery3(refreshToken: String!): String!
 }
 
 type SdkFinanceTokenResponseDto {

@@ -31,7 +31,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const jwt = ExtractJwt.fromAuthHeaderAsBearerToken()(req)
     const jwtHash = !!jwt && hashJwt(jwt)
 
-    const redisKey = `session:${payload.sub}`
+    const redisKey = `auth:session:${payload.sub}:access`
     const sessionData = await this.redisService.getValue(redisKey)
     if (!sessionData) throw new Error('No session data found') //! Change this error message later
 
