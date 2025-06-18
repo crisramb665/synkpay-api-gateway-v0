@@ -13,6 +13,9 @@ import { HealthModule } from '../health/health.module'
 import config from '../config/config'
 import { GqlThrottlerGuard } from '../rate-limit/rate-limit-custom.guard'
 import { AuthModule } from '../microservices/auth/auth.module'
+import { formatGraphQLError } from '../graphql/format-error'
+import { TestErrorResolver } from 'test/test-error/test-error.resolver'
+import { TestErrorService } from 'test/test-error/test-error.service'
 
 const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 
@@ -30,6 +33,7 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
       playground: false,
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
       context: ({ req, res }) => ({ req, res }),
+      formatError: formatGraphQLError,
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
@@ -50,6 +54,8 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
   ],
   controllers: [],
   providers: [
+    TestErrorResolver,
+    TestErrorService,
     {
       provide: APP_GUARD,
       useClass: GqlThrottlerGuard,
