@@ -15,3 +15,5 @@ export interface LoginResponse {
   apiGatewayRefreshToken: string
   expiresAt: string
 }
+
+export type RefreshTokenResponse = LoginResponse

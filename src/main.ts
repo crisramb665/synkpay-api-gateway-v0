@@ -13,6 +13,9 @@ async function bootstrap(): Promise<void> {
     const port = configService.get<number>('PORT') || 5000
 
     await app.listen(port)
+
+    //TODO: must enable CORS for allow cookies from web browser with different credentials
+
     console.log(`🚀🚀🚀 Application is running on: http://localhost:${port}`)
     console.log(`🚀🚀🚀 Application with GraphQL is running on: http://localhost:${port}/graphql`)
   } catch (error: unknown) {

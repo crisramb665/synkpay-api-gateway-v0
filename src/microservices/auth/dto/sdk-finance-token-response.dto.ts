@@ -5,7 +5,4 @@ import { ObjectType, Field } from '@nestjs/graphql'
 export class SdkFinanceTokenResponseDto {
   @Field()
   sdkFinanceTokenAccessToken: string
-
-  @Field()
-  sdkFinanceRefreshToken: string
 }

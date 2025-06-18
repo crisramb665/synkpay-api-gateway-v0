@@ -23,7 +23,7 @@ import { RedisModule } from '../../common/redis/redis.module'
         privateKey: configService.get<string>('JWT_PRIVATE_KEY_DEV'),
         signOptions: {
           algorithm: 'RS256',
-          expiresIn: configService.get<string>('JWT_EXPIRE_TIME'),
+          expiresIn: configService.get<string>('JWT_EXPIRE_TIME'), //! This is for accessToken only
         },
       }),
     }),

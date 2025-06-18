@@ -10,6 +10,7 @@ type LoginResponseDto {
 
 type Mutation {
   login(login: String!, password: String!): LoginResponseDto!
+  refreshToken(refreshToken: String): RefreshTokenResponseDto!
 }
 
 type Query {
@@ -17,10 +18,14 @@ type Query {
   securedQuery: String!
   securedQuery2: SdkFinanceTokenResponseDto!
   testServiceError: String!
-  securedQuery3(refreshToken: String!): String!
+}
+
+type RefreshTokenResponseDto {
+  apiGatewayAccessToken: String!
+  apiGatewayRefreshToken: String!
+  expiresAt: String!
 }
 
 type SdkFinanceTokenResponseDto {
-  sdkFinanceRefreshToken: String!
   sdkFinanceTokenAccessToken: String!
 }
