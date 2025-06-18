@@ -96,31 +96,6 @@ export class SDKFinanceService {
     return this.makeRequest('post', '/v1/authorization', { login, password })
   }
 
-  // async refreshToken(sdkFinanceRefreshToken: string): Promise<AuthResponseWithStatus> {
-  //   try {
-  //     if (!this.baseUrl) throw new Error('SDK Finance base URL is not defined')
-
-  //     const response = await firstValueFrom(
-  //       this.httpService.put(`${this.baseUrl}/v1/authorization`, { refreshToken: sdkFinanceRefreshToken }).pipe(
-  //         catchError((error: any) => {
-  //           throw new Error(`Failed to refresh token: ${error.message || error}`)
-  //         }),
-  //       ),
-  //     )
-
-  //     const { status, data } = response
-  //     if (status !== 200) throw new Error(`SDK Finance Refresh token failed with status code: ${status}`)
-
-  //     return { status, data }
-  //   } catch (error: unknown) {
-  //     if (error instanceof Error) {
-  //       console.error('Error during refreshToken from SDK Finance:', error.message)
-  //     } else {
-  //       console.error('Error during refreshToken from SDK Finance:', error)
-  //     }
-  //     throw error
-  //   }
-  // }
   async refreshToken(sdkFinanceRefreshToken: string): Promise<AuthResponseWithStatus> {
     return this.makeRequest('put', '/v1/authorization', { refreshToken: sdkFinanceRefreshToken })
   }
