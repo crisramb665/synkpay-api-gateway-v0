@@ -1,0 +1,15 @@
+FROM node:22-slim
+
+WORKDIR /app
+
+COPY package.json yarn.lock ./
+RUN yarn install
+
+COPY . .
+
+# Use ts-node-dev for auto-reload in dev
+RUN yarn add -D ts-node-dev
+
+EXPOSE 5000
+
+CMD ["yarn", "start:dev"]

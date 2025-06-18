@@ -1,0 +1,23 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type LoginResponseDto {
+  accessToken: String!
+  expiresAt: String!
+}
+
+type Mutation {
+  login(login: String!, password: String!): LoginResponseDto!
+}
+
+type Query {
+  getHealth: String!
+  securedQuery: String!
+  securedQuery2: SdkFinanceTokenResponseDto!
+}
+
+type SdkFinanceTokenResponseDto {
+  sdkFinanceRefreshToken: String!
+  sdkFinanceTokenAccessToken: String!
+}
