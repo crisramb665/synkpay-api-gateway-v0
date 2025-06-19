@@ -1,12 +1,14 @@
 /** npm imports */
 import { Test, TestingModule } from '@nestjs/testing'
 import { JwtService } from '@nestjs/jwt'
+import { ConfigService } from '@nestjs/config'
 
 /** local imports */
 import { AuthService } from '../auth.service'
 import { RedisService } from '../../../common/redis/redis.service'
 import { SDKFinanceService } from '../../../common/sdk-finance/sdk-finance.service'
-import { type AuthResponse } from '../../../common/sdk-finance/sdk-finance.interface'
+import type { AuthResponse } from '../../../common/sdk-finance/sdk-finance.interface'
+import { hashJwt } from '../utils/utils'
 
 describe('AuthService', () => {
   let authService: AuthService
@@ -18,6 +20,16 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'JWT_PUBLIC_KEY_DEV') return 'mockPublicKey'
+              if (key === 'JWT_PRIVATE_KEY_DEV') return 'mockPrivateKey'
+              return null
+            }),
+          },
+        },
         {
           provide: SDKFinanceService,
           useValue: {
@@ -35,6 +47,7 @@ describe('AuthService', () => {
           provide: JwtService,
           useValue: {
             sign: jest.fn(),
+            verify: jest.fn(),
           },
         },
       ],
@@ -46,16 +59,21 @@ describe('AuthService', () => {
     redisService = module.get(RedisService)
   })
 
-  it('should login and set session in Redis', async () => {
+  it('should login and set session and refresh in Redis', async () => {
     const mockLogin = 'user@test.com'
     const mockPassword = 'password123'
 
     const mockJwt = 'signed-jwt'
+    const mockJwtRefresh = 'signed-jwt-refresh'
 
     const mockedUserId = 'user123'
+    const mockedUserName = 'John Doe'
+    const mockedOrganizationId = 'org-123'
+
     const mockSdkToken = 'sdk-token'
-    const mockRefresh = 'sdk-refresh'
+    const mockSdkRefresh = 'sdk-refresh'
     const mockExpiresAt = new Date(Date.now() + 60_000).toISOString()
+    const mockRefreshExpiresAt = new Date(Date.now() + 70_000).toISOString()
 
     const mockAuthResponseWithStatus = {
       status: 200,
@@ -66,8 +84,8 @@ describe('AuthService', () => {
           token: mockSdkToken,
         },
         refreshToken: {
-          expiresAt: '2024-01-31T23:59:59Z',
-          token: mockRefresh,
+          expiresAt: mockRefreshExpiresAt,
+          token: mockSdkRefresh,
         },
         members: [
           {
@@ -94,8 +112,8 @@ describe('AuthService', () => {
             },
             user: {
               id: mockedUserId,
-              name: 'John Doe',
-              profileOrganizationId: 'org-123',
+              name: mockedUserName,
+              profileOrganizationId: mockedOrganizationId,
             },
           },
         ],
@@ -104,23 +122,30 @@ describe('AuthService', () => {
     }
 
     jest.spyOn(sdkFinanceService, 'authenticateUser').mockResolvedValue(mockAuthResponseWithStatus)
-    jest.spyOn(jwtService, 'sign').mockReturnValue(mockJwt)
+    jest.spyOn(jwtService, 'sign').mockImplementation((payload) => ((payload as any)?.jti ? mockJwtRefresh : mockJwt))
+    jest.spyOn(jwtService, 'verify').mockImplementation(() => {
+      return {
+        sub: mockedUserId,
+        name: mockedUserName,
+        profileOrganizationId: mockedOrganizationId,
+        jti: 'mock-jti-id',
+      }
+    })
     jest.spyOn(redisService, 'setValue').mockResolvedValue(undefined)
 
     const result = await authService.getTokens(mockLogin, mockPassword)
 
     expect(result).toEqual({
-      accessToken: mockJwt,
-      sdkFinanceRefreshToken: mockRefresh,
+      apiGatewayAccessToken: mockJwt,
+      apiGatewayRefreshToken: mockJwtRefresh,
       expiresAt: mockExpiresAt,
     })
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(redisService.setValue).toHaveBeenCalledWith(
-      `session:${mockedUserId}`,
+      `auth:session:${mockedUserId}:access`,
       expect.objectContaining({
         sdkFinanceToken: mockSdkToken,
-        sdkFinanceRefreshToken: mockRefresh,
         sdkFinanceTokenExpiresAt: mockExpiresAt,
         jwtHash: expect.any(String),
       }),
@@ -134,8 +159,14 @@ describe('AuthService', () => {
       data: null as unknown as AuthResponse,
     })
 
-    const result = await authService.getTokens('user@test.com', 'bad-password')
-    expect(result).toBeUndefined()
+    await expect(authService.getTokens('user@test.com', 'bad-password')).rejects.toMatchObject({
+      message: 'Login failed. Please check your credentials and try again.',
+      extensions: {
+        code: 401,
+        success: false,
+        timestamp: expect.any(String),
+      },
+    })
   })
 
   it('should throw if SDK response is missing authorizationToken.token', async () => {
@@ -186,14 +217,106 @@ describe('AuthService', () => {
     }
     jest.spyOn(sdkFinanceService, 'authenticateUser').mockResolvedValue(mockAuthResponseWithStatus)
 
-    const result = await authService.getTokens('user@test.com', 'password')
-    expect(result).toBeUndefined()
+    await expect(authService.getTokens('user@test.com', 'bad-password')).rejects.toMatchObject({
+      message: 'Login failed. Please check your credentials and try again.',
+      extensions: {
+        code: 401,
+        success: false,
+        timestamp: expect.any(String),
+      },
+    })
   })
 
   it('should handle SDKFinanceService throwing an error', async () => {
     jest.spyOn(sdkFinanceService, 'authenticateUser').mockRejectedValue(new Error('SDK down'))
 
-    const result = await authService.getTokens('user@test.com', 'password')
-    expect(result).toBeUndefined()
+    await expect(authService.getTokens('user@test.com', 'password')).rejects.toMatchObject({
+      message: 'Login failed. Please check your credentials and try again.',
+      extensions: {
+        code: 401,
+        success: false,
+        timestamp: expect.any(String),
+      },
+    })
+  })
+
+  it('should rotate tokens on refresh and persist them in Redis', async () => {
+    const userId = 'user123'
+    const name = 'John'
+    const profileOrganizationId = 'org-123'
+    const mockedJti = 'jti-abc-123'
+
+    const decodedPayload = { sub: userId, name, profileOrganizationId, jti: mockedJti }
+    const mockAccessToken = 'access-jwt'
+    const mockRefreshToken = 'refresh-jwt'
+
+    const mockSdkAccessToken = 'sdk-token'
+    const mockSdkAccessExpiresAt = new Date(Date.now() + 60_000).toISOString()
+    const mockSdkRefreshToken = 'sdk-refresh'
+    const mockSdkRefreshExpiresAt = new Date(Date.now() + 120_000).toISOString()
+
+    jest.spyOn(jwtService, 'verify').mockReturnValue(decodedPayload)
+    jest.spyOn(redisService, 'getValue').mockImplementation((key: string) => {
+      if (key.includes('refresh')) {
+        return Promise.resolve(
+          JSON.stringify({
+            jwtRefreshJtiHash: hashJwt(mockedJti),
+            jwtRefreshHash: hashJwt(mockRefreshToken),
+            sdkFinanceRefreshToken: mockSdkRefreshToken,
+            sdkFinanceRefreshTokenExpiresAt: mockSdkRefreshExpiresAt,
+          }),
+        )
+      }
+      if (key.includes('access')) {
+        return Promise.resolve(
+          JSON.stringify({
+            sdkFinanceToken: mockSdkAccessToken,
+            sdkFinanceTokenExpiresAt: mockSdkAccessExpiresAt,
+          }),
+        )
+      }
+      return Promise.resolve(null)
+    })
+
+    jest.spyOn(jwtService, 'sign').mockReturnValueOnce(mockAccessToken).mockReturnValueOnce(mockRefreshToken)
+
+    const refreshResult = await authService.refreshToken(mockRefreshToken)
+
+    expect(refreshResult).toEqual({
+      apiGatewayAccessToken: mockAccessToken,
+      apiGatewayRefreshToken: mockRefreshToken,
+      expiresAt: mockSdkAccessExpiresAt,
+    })
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(redisService.setValue).toHaveBeenCalledTimes(2)
+  })
+
+  it('should throw if refresh token is invalid or replayed', async () => {
+    const mockRefreshToken = 'invalid-refresh-token'
+    const mockDecoded = {
+      sub: 'user123',
+      name: 'John Doe',
+      profileOrganizationId: 'org-123',
+      jti: 'fake-jti',
+    }
+
+    jest.spyOn(jwtService, 'verify').mockReturnValue(mockDecoded)
+    jest.spyOn(redisService, 'getValue').mockImplementation((key: string) => {
+      if (key.endsWith(':refresh')) {
+        return Promise.resolve(
+          JSON.stringify({
+            sdkFinanceRefreshToken: 'some-token',
+            sdkFinanceRefreshTokenExpiresAt: new Date(Date.now() + 10000).toISOString(),
+            jwtRefreshHash: 'wrong-hash',
+            jwtRefreshJtiHash: 'wrong-jti-hash',
+          }),
+        )
+      }
+
+      return Promise.resolve(null)
+    })
+
+    await expect(authService.refreshToken(mockRefreshToken)).rejects.toThrow('Unauthorized or expired refresh token')
   })
 })

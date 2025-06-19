@@ -12,7 +12,7 @@ import { SdkFinanceTokenResponseDto } from './dto/sdk-finance-token-response.dto
 import { parseExpirationTime } from './utils/utils'
 import { ContextReq } from './interfaces/jwt-payload.interface'
 import { RefreshTokenResponseDto } from './dto/refresh-token-response.dto'
-import { CustomGraphQLError } from 'src/common/errors/custom-graphql.error'
+import { CustomGraphQLError } from '../../common/errors/custom-graphql.error'
 
 @Resolver()
 export class AuthResolver {
