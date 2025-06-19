@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config'
 import { randomUUID } from 'crypto'
 
 /** local imports */
+import { ConfigKey } from '../../config/enums'
 import { SDKFinanceService } from '../../common/sdk-finance/sdk-finance.service'
 import type { AuthResponseWithStatus } from '../../common/sdk-finance/sdk-finance.interface'
 import type { RefreshTokenResponse, JwtPayload, LoginResponse } from './interfaces/jwt-payload.interface'
@@ -74,7 +75,7 @@ export class AuthService {
   public async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
     try {
       const decoded = this.jwtService.verify<JwtPayload>(refreshToken, {
-        publicKey: this.configService.get<string>('JWT_PUBLIC_KEY_DEV'),
+        publicKey: this.configService.get<string>(ConfigKey.JWT_PUBLIC_KEY_DEV),
       })
       console.log({ decoded })
 
@@ -182,7 +183,7 @@ export class AuthService {
     }
 
     const refreshToken = this.jwtService.sign(refreshPayload, {
-      privateKey: this.configService.get<string>('JWT_PRIVATE_KEY_DEV'), //TODO: need to use an enum for this kind of config service calls
+      privateKey: this.configService.get<string>(ConfigKey.JWT_PRIVATE_KEY_DEV),
       expiresIn: refreshTokenExpiresIn,
       algorithm: 'RS256',
     })
@@ -224,7 +225,7 @@ export class AuthService {
     const now = Date.now()
 
     const refreshDecoded = this.jwtService.verify<JwtPayload>(jwtRefreshToken, {
-      publicKey: this.configService.get<string>('JWT_PUBLIC_KEY_DEV'),
+      publicKey: this.configService.get<string>(ConfigKey.JWT_PUBLIC_KEY_DEV),
     })
     const jti = refreshDecoded.jti
     const jtiHash = jti ? hashJwt(jti) : null

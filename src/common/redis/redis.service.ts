@@ -3,14 +3,17 @@ import { Injectable, OnModuleDestroy } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import Redis from 'ioredis'
 
+/** local imports */
+import { ConfigKey } from '../../config/enums'
+
 @Injectable()
 export class RedisService implements OnModuleDestroy {
   private readonly redisClient: Redis
 
   constructor(private readonly configService: ConfigService) {
     this.redisClient = new Redis({
-      host: this.configService.get<string>('REDIS_HOST'),
-      port: this.configService.get<number>('REDIS_PORT'),
+      host: this.configService.get<string>(ConfigKey.REDIS_HOST),
+      port: this.configService.get<number>(ConfigKey.REDIS_PORT),
     })
   }
 

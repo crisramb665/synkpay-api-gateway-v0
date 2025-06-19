@@ -6,6 +6,7 @@ import type { Request, Response } from 'express'
 
 /** local imports */
 import { AuthService } from './auth.service'
+import { ConfigKey } from '../../config/enums'
 import { GqlAuthGuard } from './guards/jwt-auth.guard'
 import { LoginResponseDto } from './dto/login-response.dto'
 import { SdkFinanceTokenResponseDto } from './dto/sdk-finance-token-response.dto'
@@ -33,10 +34,10 @@ export class AuthResolver {
         throw new Error('Login failed. Please check your credentials and try again.')
 
       context.res.cookie('refreshToken', result.apiGatewayRefreshToken, {
-        httpOnly: this.configService.get<string>('NODE_ENV') === 'production',
-        secure: this.configService.get<string>('NODE_ENV') === 'production',
+        httpOnly: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
+        secure: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
         sameSite: 'none', //TODO Checking if must be 'strict' on prod
-        maxAge: parseExpirationTime(this.configService.get<string>('JWT_EXPIRE_TIME') ?? '24h'),
+        maxAge: parseExpirationTime(this.configService.get<string>(ConfigKey.JWT_EXPIRE_TIME) ?? '24h'),
       })
 
       return result
@@ -58,10 +59,10 @@ export class AuthResolver {
 
     // TODO Must enable CORS to test this in the browser
     context?.res.cookie('refreshToken', result.apiGatewayRefreshToken, {
-      httpOnly: this.configService.get<string>('NODE_ENV') === 'production',
-      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      httpOnly: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
+      secure: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
       sameSite: 'none', //TODO Checking if must be 'strict' on prod
-      maxAge: parseExpirationTime(this.configService.get<string>('JWT_EXPIRE_TIME') ?? '24h'),
+      maxAge: parseExpirationTime(this.configService.get<string>(ConfigKey.JWT_EXPIRE_TIME) ?? '24h'),
     })
 
     return result
@@ -78,8 +79,8 @@ export class AuthResolver {
       if (!revoked) throw new CustomGraphQLError('Failed to revoke tokens', 500, false, true)
 
       context.res.clearCookie('refreshToken', {
-        httpOnly: this.configService.get<string>('NODE_ENV') === 'production',
-        secure: this.configService.get<string>('NODE_ENV') === 'production',
+        httpOnly: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
+        secure: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
         sameSite: 'none', //TODO Checking if must be 'strict' on prod
       })
 

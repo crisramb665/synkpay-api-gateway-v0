@@ -7,6 +7,7 @@ import { AxiosRequestConfig, AxiosResponse } from 'axios'
 
 /** local imports */
 import { type AuthResponseWithStatus } from './sdk-finance.interface'
+import { ConfigKey } from '../../config/enums'
 
 interface RegistrationParams {
   login: string
@@ -35,7 +36,7 @@ export class SDKFinanceService {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
   ) {
-    this.baseUrl = this.configService.get<string>('SDK_FINANCE_BASE_URL')
+    this.baseUrl = this.configService.get<string>(ConfigKey.SDK_FINANCE_BASE_URL)
     if (!this.baseUrl) throw new Error('SDK Finance base URL is not defined in the configuration')
   }
 

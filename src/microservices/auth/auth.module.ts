@@ -11,6 +11,7 @@ import { AuthResolver } from './auth.resolver'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { SDKFinanceService } from '../../common/sdk-finance/sdk-finance.service'
 import { RedisModule } from '../../common/redis/redis.module'
+import { ConfigKey } from '../../config/enums'
 
 @Module({
   imports: [
@@ -20,10 +21,10 @@ import { RedisModule } from '../../common/redis/redis.module'
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        privateKey: configService.get<string>('JWT_PRIVATE_KEY_DEV'),
+        privateKey: configService.get<string>(ConfigKey.JWT_PRIVATE_KEY_DEV),
         signOptions: {
           algorithm: 'RS256',
-          expiresIn: configService.get<string>('JWT_EXPIRE_TIME'), //! This is for accessToken only
+          expiresIn: configService.get<string>(ConfigKey.JWT_EXPIRE_TIME), //! This is for accessToken only
         },
       }),
     }),
