@@ -2,14 +2,15 @@
 import { Injectable } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
+import { randomUUID } from 'crypto'
 
 /** local imports */
 import { SDKFinanceService } from '../../common/sdk-finance/sdk-finance.service'
-import { type AuthResponseWithStatus } from '../../common/sdk-finance/sdk-finance.interface'
-import { RefreshTokenResponse, type JwtPayload, type LoginResponse } from './interfaces/jwt-payload.interface'
+import type { AuthResponseWithStatus } from '../../common/sdk-finance/sdk-finance.interface'
+import type { RefreshTokenResponse, JwtPayload, LoginResponse } from './interfaces/jwt-payload.interface'
 import { RedisService } from '../../common/redis/redis.service'
 import { hashJwt } from './utils/utils'
-import { CustomGraphQLError } from 'src/common/errors/custom-graphql.error'
+import { CustomGraphQLError } from '../../common/errors/custom-graphql.error'
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,7 @@ export class AuthService {
     private readonly redisService: RedisService,
   ) {}
 
-  public async login(login: string, password: string): Promise<LoginResponse | undefined> {
+  public async getTokens(login: string, password: string): Promise<LoginResponse | undefined> {
     try {
       const { data, status } = await this.sdkFinanceService.authenticateUser(login, password)
       if (status !== 200) throw new Error('Failed to authenticate with SDK Finance')
@@ -45,7 +46,7 @@ export class AuthService {
       )
 
       await this.persistTokensToRedis(
-        payload.sub,
+        userId,
         {
           token: data.authorizationToken.token,
           expiresAt: data.authorizationToken.expiresAt,
@@ -65,6 +66,7 @@ export class AuthService {
       }
     } catch (error) {
       console.error('Error during login:', error)
+      throw new CustomGraphQLError('Login failed. Please check your credentials and try again.', 401, false, true)
     }
   }
 
@@ -74,17 +76,23 @@ export class AuthService {
       const decoded = this.jwtService.verify<JwtPayload>(refreshToken, {
         publicKey: this.configService.get<string>('JWT_PUBLIC_KEY_DEV'),
       })
+      console.log({ decoded })
 
-      const { sub: userId, name, profileOrganizationId } = decoded
-      if (!userId) throw new CustomGraphQLError('Invalid refresh token', 400, false)
+      const { sub: userId, name, profileOrganizationId, jti } = decoded
+      if (!userId || !jti) throw new CustomGraphQLError('Invalid refresh token', 400, false)
 
       const baseKey = this.getBaseRedisKey(userId)
       const redisSessionKey = `${baseKey}:access`
       const redisRefreshKey = `${baseKey}:refresh`
 
       const storedRefresh = await this.safeParse(await this.redisService.getValue(redisRefreshKey))
-      if (!storedRefresh || storedRefresh.jwtRefreshHash !== hashJwt(refreshToken))
-        throw new CustomGraphQLError('Invalid or missing refresh token', 401)
+      if (
+        !storedRefresh ||
+        storedRefresh.jwtRefreshHash !== hashJwt(refreshToken) ||
+        storedRefresh.jwtRefreshJtiHash !== hashJwt(jti)
+      ) {
+        throw new CustomGraphQLError('Invalid or replayed refresh token', 401)
+      }
 
       const session = await this.safeParse(await this.redisService.getValue(redisSessionKey))
       if (!session) throw new CustomGraphQLError('No SDK Finance session found', 401)
@@ -141,15 +149,22 @@ export class AuthService {
     }
   }
 
-  public async getSdkFinanceTokens(user: JwtPayload) {
-    const redisSessionKey = `auth:session:${user.sub}:access`
-    const redisRefreshKey = `auth:session:${user.sub}:refresh`
+  public async getSdkFinanceTokens(
+    userId: string,
+  ): Promise<{ sdkFinanceAccessToken: string; sdkFinanceRefreshToken: string }> {
+    const baseKey = this.getBaseRedisKey(userId)
+    const redisSessionKey = `${baseKey}:access`
+    const redisRefreshKey = `${baseKey}:refresh`
 
-    const sessionValue = await this.redisService.getValue(redisSessionKey)
-    const refreshValue = await this.redisService.getValue(redisRefreshKey)
-    console.log({ sessionValue, refreshValue }) //TODO: Fix this later
+    const [sessionValue, refreshValue] = await Promise.all([
+      await this.safeParse(await this.redisService.getValue(redisSessionKey)),
+      await this.safeParse(await this.redisService.getValue(redisRefreshKey)),
+    ])
 
-    return JSON.parse(sessionValue!) as { sdkFinanceToken: string }
+    return {
+      sdkFinanceAccessToken: (sessionValue as any).sdkFinanceToken,
+      sdkFinanceRefreshToken: (refreshValue as any).sdkFinanceRefreshToken,
+    }
   }
 
   private generateApiGatewayTokens(
@@ -160,13 +175,42 @@ export class AuthService {
     apiGatewayRefreshToken: string
   } {
     const accessToken = this.jwtService.sign(payload)
-    const refreshToken = this.jwtService.sign(payload, {
+
+    const refreshPayload = {
+      ...payload,
+      jti: randomUUID(),
+    }
+
+    const refreshToken = this.jwtService.sign(refreshPayload, {
       privateKey: this.configService.get<string>('JWT_PRIVATE_KEY_DEV'), //TODO: need to use an enum for this kind of config service calls
       expiresIn: refreshTokenExpiresIn,
       algorithm: 'RS256',
     })
 
     return { apiGatewayAccessToken: accessToken, apiGatewayRefreshToken: refreshToken }
+  }
+
+  public async revokeTokens(userId: string): Promise<boolean> {
+    try {
+      const { sdkFinanceAccessToken } = await this.getSdkFinanceTokens(userId)
+
+      const authenticatedUser = this.sdkFinanceService.withToken(sdkFinanceAccessToken)
+      await authenticatedUser.deleteAccessTokenAndLogout()
+
+      const baseKey = this.getBaseRedisKey(userId)
+      const redisSessionKey = `${baseKey}:access`
+      const redisRefreshKey = `${baseKey}:refresh`
+
+      await Promise.all([
+        await this.redisService.deleteValue(redisSessionKey),
+        await this.redisService.deleteValue(redisRefreshKey),
+      ])
+
+      return true
+    } catch (error) {
+      console.error('Error revoking tokens:', error)
+      return false
+    }
   }
 
   private async persistTokensToRedis(
@@ -178,6 +222,12 @@ export class AuthService {
   ): Promise<void> {
     const baseKey = this.getBaseRedisKey(userId)
     const now = Date.now()
+
+    const refreshDecoded = this.jwtService.verify<JwtPayload>(jwtRefreshToken, {
+      publicKey: this.configService.get<string>('JWT_PUBLIC_KEY_DEV'),
+    })
+    const jti = refreshDecoded.jti
+    const jtiHash = jti ? hashJwt(jti) : null
 
     await this.redisService.setValue(
       `${baseKey}:access`,
@@ -195,12 +245,13 @@ export class AuthService {
         sdkFinanceRefreshToken: refresh.token,
         sdkFinanceRefreshTokenExpiresAt: refresh.expiresAt,
         jwtRefreshHash: hashJwt(jwtRefreshToken),
+        jwtRefreshJtiHash: jtiHash,
       },
       new Date(refresh.expiresAt).getTime() - now,
     )
   }
 
-  private getBaseRedisKey(userId: string) {
+  private getBaseRedisKey(userId: string): string {
     return `auth:session:${userId}`
   }
 

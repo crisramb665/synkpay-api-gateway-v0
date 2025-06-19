@@ -5,6 +5,7 @@ export interface JwtPayload {
   sub: string
   name: string
   profileOrganizationId: string
+  jti?: string //! Can be scalable for multiple auth types (using isolated service), but not required for now
 }
 
 export interface ContextReq extends IncomingMessage {

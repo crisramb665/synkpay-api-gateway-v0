@@ -20,7 +20,13 @@ interface RegistrationParams {
   }
 }
 
-type MethodParams = 'post' | 'put' | 'get' | 'delete' | 'patch'
+interface MakeRequestParams {
+  method: 'post' | 'put' | 'get' | 'delete' | 'patch'
+  endpoint: string
+  data: any
+  headers?: Record<string, string>
+}
+
 @Injectable()
 export class SDKFinanceService {
   private readonly baseUrl: string | undefined
@@ -30,13 +36,19 @@ export class SDKFinanceService {
     private readonly httpService: HttpService,
   ) {
     this.baseUrl = this.configService.get<string>('SDK_FINANCE_BASE_URL')
+    if (!this.baseUrl) throw new Error('SDK Finance base URL is not defined in the configuration')
   }
 
-  private async makeRequest<T>(
-    method: MethodParams,
-    endpoint: string,
-    data: any,
-  ): Promise<{ status: number; data: T }> {
+  public withToken(accessToken: string): AuthenticatedSDKFinanceClient {
+    return new AuthenticatedSDKFinanceClient(this, accessToken)
+  }
+
+  public async makeRequest<T>({
+    method,
+    endpoint,
+    data,
+    headers,
+  }: MakeRequestParams): Promise<{ status: number; data: T }> {
     if (!this.baseUrl) throw new Error('SDK Finance base URL is not defined')
 
     try {
@@ -44,6 +56,7 @@ export class SDKFinanceService {
         method,
         url: `${this.baseUrl}${endpoint}`,
         data,
+        ...(headers ? { headers } : {}),
       }
 
       const response: AxiosResponse = await firstValueFrom(
@@ -55,8 +68,6 @@ export class SDKFinanceService {
       )
 
       const { status, data: responseData } = response
-      if (status !== 200) throw new Error(`SDK Finance request failed with status code: ${status}`) //TODO: refactor this part to map proper errors
-
       return { status, data: responseData as T }
     } catch (error) {
       if (error instanceof Error) {
@@ -81,7 +92,7 @@ export class SDKFinanceService {
         }),
       )
 
-      console.log({ response })
+      console.log({ response }) //TODO: Work with OPT validations
     } catch (error) {
       if (error instanceof Error) {
         console.error('Error during register from SDK Finance:', error.message)
@@ -93,10 +104,32 @@ export class SDKFinanceService {
   }
 
   async authenticateUser(login: string, password: string): Promise<AuthResponseWithStatus> {
-    return this.makeRequest('post', '/v1/authorization', { login, password })
+    return this.makeRequest({ method: 'post', endpoint: '/v1/authorization', data: { login, password } })
   }
 
   async refreshToken(sdkFinanceRefreshToken: string): Promise<AuthResponseWithStatus> {
-    return this.makeRequest('put', '/v1/authorization', { refreshToken: sdkFinanceRefreshToken })
+    return this.makeRequest({
+      method: 'put',
+      endpoint: '/v1/authorization',
+      data: { refreshToken: sdkFinanceRefreshToken },
+    })
+  }
+}
+
+export class AuthenticatedSDKFinanceClient {
+  constructor(
+    private readonly sdkFinanceService: SDKFinanceService,
+    private readonly sdkFinanceAccessToken: string,
+  ) {}
+
+  async deleteAccessTokenAndLogout() {
+    return this.sdkFinanceService.makeRequest({
+      method: 'delete',
+      endpoint: '/v1/authorization',
+      data: {},
+      headers: {
+        Authorization: `Bearer ${this.sdkFinanceAccessToken}`,
+      },
+    })
   }
 }

@@ -10,6 +10,7 @@ type LoginResponseDto {
 
 type Mutation {
   login(login: String!, password: String!): LoginResponseDto!
+  logout: Boolean!
   refreshToken(refreshToken: String): RefreshTokenResponseDto!
 }
 
@@ -27,5 +28,5 @@ type RefreshTokenResponseDto {
 }
 
 type SdkFinanceTokenResponseDto {
-  sdkFinanceTokenAccessToken: String!
+  sdkFinanceAccessToken: String!
 }

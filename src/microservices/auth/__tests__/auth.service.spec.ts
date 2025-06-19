@@ -107,7 +107,7 @@ describe('AuthService', () => {
     jest.spyOn(jwtService, 'sign').mockReturnValue(mockJwt)
     jest.spyOn(redisService, 'setValue').mockResolvedValue(undefined)
 
-    const result = await authService.login(mockLogin, mockPassword)
+    const result = await authService.getTokens(mockLogin, mockPassword)
 
     expect(result).toEqual({
       accessToken: mockJwt,
@@ -134,7 +134,7 @@ describe('AuthService', () => {
       data: null as unknown as AuthResponse,
     })
 
-    const result = await authService.login('user@test.com', 'bad-password')
+    const result = await authService.getTokens('user@test.com', 'bad-password')
     expect(result).toBeUndefined()
   })
 
@@ -186,14 +186,14 @@ describe('AuthService', () => {
     }
     jest.spyOn(sdkFinanceService, 'authenticateUser').mockResolvedValue(mockAuthResponseWithStatus)
 
-    const result = await authService.login('user@test.com', 'password')
+    const result = await authService.getTokens('user@test.com', 'password')
     expect(result).toBeUndefined()
   })
 
   it('should handle SDKFinanceService throwing an error', async () => {
     jest.spyOn(sdkFinanceService, 'authenticateUser').mockRejectedValue(new Error('SDK down'))
 
-    const result = await authService.login('user@test.com', 'password')
+    const result = await authService.getTokens('user@test.com', 'password')
     expect(result).toBeUndefined()
   })
 })
