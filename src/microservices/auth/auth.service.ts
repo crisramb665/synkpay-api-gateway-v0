@@ -25,9 +25,9 @@ export class AuthService {
   public async getTokens(login: string, password: string): Promise<LoginResponse | undefined> {
     try {
       const { data, status } = await this.sdkFinanceService.authenticateUser(login, password)
-      if (status !== 200) throw new Error('Failed to authenticate with SDK Finance')
+      if (status !== 200) throw new CustomGraphQLError('Failed to authenticate with SDK Finance', status)
 
-      if (!data.authorizationToken.token) throw new Error('Invalid credentials')
+      if (!data.authorizationToken.token) throw new CustomGraphQLError('Invalid credentials', status)
 
       const user = data.members[0]?.user
       const { id: userId, name, profileOrganizationId } = user
@@ -77,7 +77,6 @@ export class AuthService {
       const decoded = this.jwtService.verify<JwtPayload>(refreshToken, {
         publicKey: this.configService.get<string>(ConfigKey.JWT_PUBLIC_KEY_DEV),
       })
-      console.log({ decoded })
 
       const { sub: userId, name, profileOrganizationId, jti } = decoded
       if (!userId || !jti) throw new CustomGraphQLError('Invalid refresh token', 400, false)
