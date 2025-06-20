@@ -3,18 +3,21 @@ import { Injectable, OnModuleDestroy } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import Redis from 'ioredis'
 
+/** local imports */
+import { ConfigKey } from '../../config/enums'
+
 @Injectable()
 export class RedisService implements OnModuleDestroy {
   private readonly redisClient: Redis
 
   constructor(private readonly configService: ConfigService) {
     this.redisClient = new Redis({
-      host: this.configService.get<string>('REDIS_HOST'),
-      port: this.configService.get<number>('REDIS_PORT'),
+      host: this.configService.get<string>(ConfigKey.REDIS_HOST),
+      port: this.configService.get<number>(ConfigKey.REDIS_PORT),
     })
   }
 
-  async setValue(key: string, value: any, ttlSeconds?: number): Promise<void> {
+  async setValue(key: string, value: any, ttlMiliSeconds?: number): Promise<void> {
     let val: string
     if (typeof value === 'string') {
       try {
@@ -27,18 +30,18 @@ export class RedisService implements OnModuleDestroy {
       val = JSON.stringify(value)
     }
 
-    if (ttlSeconds) await this.redisClient.set(key, val, 'PX', ttlSeconds)
+    if (ttlMiliSeconds) await this.redisClient.set(key, val, 'PX', ttlMiliSeconds)
     else await this.redisClient.set(key, val)
   }
 
-  async getValue(key: string) {
+  async getValue(key: string): Promise<string | null> {
     const value = await this.redisClient.get(key)
     if (!value) return null
 
     return value
   }
 
-  async delete(key: string): Promise<void> {
+  async deleteValue(key: string): Promise<void> {
     await this.redisClient.del(key)
   }
 
@@ -47,7 +50,7 @@ export class RedisService implements OnModuleDestroy {
     return result === 1
   }
 
-  async onModuleDestroy() {
+  async onModuleDestroy(): Promise<void> {
     await this.redisClient.quit()
   }
 }

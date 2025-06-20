@@ -14,8 +14,8 @@ import config from '../config/config'
 import { GqlThrottlerGuard } from '../rate-limit/rate-limit-custom.guard'
 import { AuthModule } from '../microservices/auth/auth.module'
 import { formatGraphQLError } from '../graphql/format-error'
-import { TestErrorResolver } from 'test/test-error/test-error.resolver'
-import { TestErrorService } from 'test/test-error/test-error.service'
+import { TestErrorResolver } from '../../test/test-error/test-error.resolver'
+import { TestErrorService } from '../../test/test-error/test-error.service'
 
 const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 

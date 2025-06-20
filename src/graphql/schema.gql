@@ -3,12 +3,15 @@
 # ------------------------------------------------------
 
 type LoginResponseDto {
-  accessToken: String!
+  apiGatewayAccessToken: String!
+  apiGatewayRefreshToken: String!
   expiresAt: String!
 }
 
 type Mutation {
   login(login: String!, password: String!): LoginResponseDto!
+  logout: Boolean!
+  refreshToken(refreshToken: String): RefreshTokenResponseDto!
 }
 
 type Query {
@@ -18,7 +21,12 @@ type Query {
   testServiceError: String!
 }
 
+type RefreshTokenResponseDto {
+  apiGatewayAccessToken: String!
+  apiGatewayRefreshToken: String!
+  expiresAt: String!
+}
+
 type SdkFinanceTokenResponseDto {
-  sdkFinanceRefreshToken: String!
-  sdkFinanceTokenAccessToken: String!
+  sdkFinanceAccessToken: String!
 }

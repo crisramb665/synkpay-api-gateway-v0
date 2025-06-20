@@ -5,13 +5,16 @@ export interface JwtPayload {
   sub: string
   name: string
   profileOrganizationId: string
+  jti?: string //! Can be scalable for multiple auth types (using isolated service), but not required for now
 }
 
 export interface ContextReq extends IncomingMessage {
   user: JwtPayload
 }
 export interface LoginResponse {
-  accessToken: string
-  sdkFinanceRefreshToken: string
+  apiGatewayAccessToken: string
+  apiGatewayRefreshToken: string
   expiresAt: string
 }
+
+export type RefreshTokenResponse = LoginResponse
