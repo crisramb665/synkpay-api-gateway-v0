@@ -6,27 +6,8 @@ import { catchError, firstValueFrom } from 'rxjs'
 import { AxiosRequestConfig, AxiosResponse } from 'axios'
 
 /** local imports */
-import { type AuthResponseWithStatus } from './sdk-finance.interface'
+import type { MakeRequestParams, RegistrationParams, AuthResponseWithStatus } from './sdk-finance.interface'
 import { ConfigKey } from '../../config/enums'
-
-interface RegistrationParams {
-  login: string
-  role: string
-  legalType: string
-  administrator: {
-    firstName: string
-    lastName: string
-    email: string
-    phone: string
-  }
-}
-
-interface MakeRequestParams {
-  method: 'post' | 'put' | 'get' | 'delete' | 'patch'
-  endpoint: string
-  data: any
-  headers?: Record<string, string>
-}
 
 @Injectable()
 export class SDKFinanceService {
