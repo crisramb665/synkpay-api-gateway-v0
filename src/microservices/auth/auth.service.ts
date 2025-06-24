@@ -12,6 +12,7 @@ import type { RefreshTokenResponse, JwtPayload, LoginResponse } from './interfac
 import { RedisService } from '../../common/redis/redis.service'
 import { hashJwt } from './utils/utils'
 import { CustomGraphQLError } from '../../common/errors/custom-graphql.error'
+import type { RefreshValue, SessionValue } from './interfaces/service.interface'
 
 @Injectable()
 export class AuthService {
@@ -85,7 +86,7 @@ export class AuthService {
       const redisSessionKey = `${baseKey}:access`
       const redisRefreshKey = `${baseKey}:refresh`
 
-      const storedRefresh = await this.safeParse(await this.redisService.getValue(redisRefreshKey))
+      const storedRefresh = this.safeParse<RefreshValue>(await this.redisService.getValue(redisRefreshKey))
       if (
         !storedRefresh ||
         storedRefresh.jwtRefreshHash !== hashJwt(refreshToken) ||
@@ -94,7 +95,7 @@ export class AuthService {
         throw new CustomGraphQLError('Invalid or replayed refresh token', 401)
       }
 
-      const session = await this.safeParse(await this.redisService.getValue(redisSessionKey))
+      const session = this.safeParse<SessionValue>(await this.redisService.getValue(redisSessionKey))
       if (!session) throw new CustomGraphQLError('No SDK Finance session found', 401)
 
       let { sdkFinanceToken, sdkFinanceTokenExpiresAt } = session
@@ -145,7 +146,7 @@ export class AuthService {
       }
     } catch (error: any) {
       console.error('Error refreshing token:', error)
-      throw new Error('Unauthorized or expired refresh token')
+      throw new CustomGraphQLError('Invalid or replayed refresh token', 401)
     }
   }
 
@@ -157,13 +158,15 @@ export class AuthService {
     const redisRefreshKey = `${baseKey}:refresh`
 
     const [sessionValue, refreshValue] = await Promise.all([
-      await this.safeParse(await this.redisService.getValue(redisSessionKey)),
-      await this.safeParse(await this.redisService.getValue(redisRefreshKey)),
+      this.safeParse<SessionValue>(await this.redisService.getValue(redisSessionKey)),
+      this.safeParse<RefreshValue>(await this.redisService.getValue(redisRefreshKey)),
     ])
 
+    if (!sessionValue || !refreshValue) throw new CustomGraphQLError('No SDK Finance session found', 401)
+
     return {
-      sdkFinanceAccessToken: (sessionValue as any).sdkFinanceToken,
-      sdkFinanceRefreshToken: (refreshValue as any).sdkFinanceRefreshToken,
+      sdkFinanceAccessToken: sessionValue.sdkFinanceToken,
+      sdkFinanceRefreshToken: refreshValue.sdkFinanceRefreshToken,
     }
   }
 

@@ -37,7 +37,7 @@ export class AuthResolver {
         httpOnly: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
         secure: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
         sameSite: 'none', //TODO Checking if must be 'strict' on prod
-        maxAge: parseExpirationTime(this.configService.get<string>(ConfigKey.JWT_EXPIRE_TIME) ?? '24h'),
+        maxAge: parseExpirationTime(this.configService.get<string>(ConfigKey.JWT_REFRESH_EXPIRE_TIME) ?? '24h'),
       })
 
       return result
@@ -62,7 +62,7 @@ export class AuthResolver {
       httpOnly: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
       secure: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
       sameSite: 'none', //TODO Checking if must be 'strict' on prod
-      maxAge: parseExpirationTime(this.configService.get<string>(ConfigKey.JWT_EXPIRE_TIME) ?? '24h'),
+      maxAge: parseExpirationTime(this.configService.get<string>(ConfigKey.JWT_REFRESH_EXPIRE_TIME) ?? '24h'),
     })
 
     return result
