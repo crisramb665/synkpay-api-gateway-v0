@@ -1,6 +1,6 @@
 /** npm imports */
 import { join } from 'path'
-import { Module } from '@nestjs/common'
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { GraphQLModule } from '@nestjs/graphql'
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
@@ -16,6 +16,8 @@ import { AuthModule } from '../microservices/auth/auth.module'
 import { formatGraphQLError } from '../graphql/format-error'
 import { TestErrorResolver } from '../../test/test-error/test-error.resolver'
 import { TestErrorService } from '../../test/test-error/test-error.service'
+import { HeaderSanitizerMiddleware } from '../security/middleware/header-sanitizer.middleware'
+import { RequestValidatorMiddleware } from '../security/middleware/request-validator.middleware'
 
 const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 
@@ -62,4 +64,8 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(HeaderSanitizerMiddleware, RequestValidatorMiddleware).forRoutes('*')
+  }
+}

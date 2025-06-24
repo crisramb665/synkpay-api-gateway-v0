@@ -13,4 +13,6 @@ export default () => ({
   JWT_REFRESH_EXPIRE_TIME: process.env.JWT_REFRESH_EXPIRE_TIME ?? '7d',
   REDIS_HOST: process.env.REDIS_HOST ?? 'localhost',
   REDIS_PORT: parseInt(process.env.REDIS_PORT ?? '6379', 10),
+  ENABLE_HTTPS: process.env.ENABLE_HTTPS === 'true',
+  CORS_ORIGIN: process.env.CORS_ORIGIN ?? '*',
 })
