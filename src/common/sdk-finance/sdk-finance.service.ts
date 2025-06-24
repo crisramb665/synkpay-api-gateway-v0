@@ -2,11 +2,16 @@
 import { HttpService } from '@nestjs/axios'
 import { ConfigService } from '@nestjs/config'
 import { Injectable } from '@nestjs/common'
-import { firstValueFrom, from } from 'rxjs'
+import { firstValueFrom } from 'rxjs'
 import { AxiosRequestConfig, AxiosResponse } from 'axios'
 
 /** local imports */
-import { AuthResponse, type MakeRequestParams, type RegistrationParams, type AuthResponseWithStatus } from './sdk-finance.interface'
+import {
+  AuthResponse,
+  type MakeRequestParams,
+  type RegistrationParams,
+  type AuthResponseWithStatus,
+} from './sdk-finance.interface'
 import { CustomGraphQLError } from '../../common/errors/custom-graphql.error'
 import { LoggerService } from '../../logging/logger.service'
 import { ConfigKey } from '../../config/enums'
@@ -34,7 +39,9 @@ export class SDKFinanceService {
     data,
     headers,
   }: MakeRequestParams): Promise<{ status: number; data: T }> {
-    if (!this.baseUrl) throw new Error('SDK Finance base URL is not defined')
+    if (!this.baseUrl) {
+      throw new CustomGraphQLError('Missing SDK Finance base URL in environment configuration.', 500)
+    }
 
     try {
       const config: AxiosRequestConfig = {
@@ -44,23 +51,21 @@ export class SDKFinanceService {
         ...(headers ? { headers } : {}),
       }
 
-      const response: AxiosResponse = await firstValueFrom(
-        this.httpService.request(config).pipe(
-          catchError((error: any) => {
-            throw new Error(`SDK Finance request failed: ${error?.response?.data?.message || error.message || error}`)
-          }),
-        ),
-      )
+      const response: AxiosResponse = await firstValueFrom(this.httpService.request(config))
 
       const { status, data: responseData } = response
       return { status, data: responseData as T }
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error('SDK Finance error:', error.message)
-      } else {
-        console.error('SDK Finance unknown error:', error)
-      }
-      throw error
+    } catch (error: any) {
+      const status = error?.response?.status || 500
+
+      this.logger.error(`SDK Finance request failed: ${error?.message || 'Unknown error'}`, error.stack, {
+        statusCode: status,
+        endpoint,
+        method,
+        type: 'request',
+      })
+
+      throw new CustomGraphQLError(error?.response?.data?.message || 'SDK Finance request failed', status)
     }
   }
 
@@ -116,7 +121,6 @@ export class SDKFinanceService {
 
       throw new CustomGraphQLError(message, status)
     }
-    return this.makeRequest({ method: 'post', endpoint: '/v1/authorization', data: { login, password } })
   }
 
   async refreshToken(sdkFinanceRefreshToken: string): Promise<AuthResponseWithStatus> {

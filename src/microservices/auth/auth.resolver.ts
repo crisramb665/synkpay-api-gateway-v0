@@ -33,7 +33,6 @@ export class AuthResolver {
     try {
       const result = await this.authService.getTokens(login, password)
       if (!result || !result.apiGatewayAccessToken)
-       
         throw new CustomGraphQLError('Invalid login credentials. Authentication required.', 401)
 
       context.res.cookie('refreshToken', result.apiGatewayRefreshToken, {
@@ -97,9 +96,6 @@ export class AuthResolver {
       throw new CustomGraphQLError('Logout failed', 500, false, true)
     }
   }
-
-  
-  
 
   //! JUST FOR MANUAL TESTING PURPOSES
   @Query(() => String)
