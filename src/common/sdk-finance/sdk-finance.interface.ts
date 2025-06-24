@@ -1,3 +1,11 @@
+export interface MakeRequestParams {
+  method: 'post' | 'put' | 'get' | 'delete' | 'patch'
+  endpoint: string
+  data: any
+  headers?: Record<string, string>
+}
+
+//! Authorization interfaces for SDK Finance
 export interface AuthToken {
   expiresAt: string
   token: string
@@ -43,4 +51,17 @@ export interface AuthResponse {
 export interface AuthResponseWithStatus {
   status: number
   data: AuthResponse
+}
+
+//! User self registration interfaces
+export interface RegistrationParams {
+  login: string
+  role: string
+  legalType: string
+  administrator: {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+  }
 }

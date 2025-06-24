@@ -5,7 +5,8 @@ import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
 
 /** Local imports */
-import { type JwtPayload } from '../interfaces/jwt-payload.interface'
+import type { JwtPayload } from '../interfaces/jwt-payload.interface'
+import { ConfigKey } from '../../../config/enums'
 import { RedisService } from '../../../common/redis/redis.service'
 import { hashJwt } from '../utils/utils'
 
@@ -15,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     configService: ConfigService,
     private readonly redisService: RedisService,
   ) {
-    const publicKey = configService.get<string>('JWT_PUBLIC_KEY_DEV')
+    const publicKey = configService.get<string>(ConfigKey.JWT_PUBLIC_KEY_DEV)
     if (!publicKey) throw new Error('JWT public key is not defined in environment variables')
 
     super({
@@ -31,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const jwt = ExtractJwt.fromAuthHeaderAsBearerToken()(req)
     const jwtHash = !!jwt && hashJwt(jwt)
 
-    const redisKey = `session:${payload.sub}`
+    const redisKey = `auth:session:${payload.sub}:access`
     const sessionData = await this.redisService.getValue(redisKey)
     if (!sessionData) throw new Error('No session data found') //! Change this error message later
 
