@@ -8,21 +8,31 @@ import { GqlAuthGuard } from './guards/jwt-auth.guard'
 import { LoginResponseDto } from './dto/login-response.dto'
 import { type ContextReq } from './interfaces/jwt-payload.interface'
 import { SdkFinanceTokenResponseDto } from './dto/sdk-finance-token-response.dto'
+import { CustomGraphQLError } from '../../common/errors/custom-graphql.error'
+import { LoggerService } from '../../logging/logger.service'
 
 @Resolver()
 export class AuthResolver {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly logger: LoggerService,
+  ) {}
 
   @Mutation(() => LoginResponseDto)
   async login(@Args('login') login: string, @Args('password') password: string): Promise<LoginResponseDto> {
     try {
       const result = await this.authService.login(login, password)
-      if (!result || !result.accessToken) throw new Error('Login failed. Please check your credentials and try again.')
+      if (!result || !result.accessToken)
+        throw new CustomGraphQLError('Invalid login credentials. Authentication required.', 401)
 
       return result
     } catch (error) {
-      console.error('Error during login:', error)
-      throw new Error('Login failed. Please check your credentials and try again.')
+      this.logger.error('Error during login', (error as Error).stack, {
+        operationName: 'login',
+        service: 'api-gateway',
+        type: 'request',
+      })
+      throw new CustomGraphQLError('Invalid login credentials. Authentication required.', 401)
     }
   }
 
@@ -47,7 +57,8 @@ export class AuthResolver {
       return { sdkFinanceTokenAccessToken, sdkFinanceRefreshToken }
     } catch (error: any) {
       //! This is not a server error, need to fix this with refresh token implementation
-      throw new Error('SDK Finance has expired or was revoked. Please re-authenticate', error) //! This is not a server error
+      const status = error?.response?.status || 500
+      throw new CustomGraphQLError('SDK Finance token has expired or was revoked. Please re-authenticate', status) //! This is not a server error
     }
   }
 }

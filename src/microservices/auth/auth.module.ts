@@ -11,11 +11,13 @@ import { AuthResolver } from './auth.resolver'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { SDKFinanceService } from '../../common/sdk-finance/sdk-finance.service'
 import { RedisModule } from '../../common/redis/redis.module'
+import { LoggerModule } from '../../logging/logger.module'
 
 @Module({
   imports: [
     ConfigModule,
     PassportModule,
+    LoggerModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

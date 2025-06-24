@@ -6,7 +6,8 @@ import { JwtService } from '@nestjs/jwt'
 import { AuthService } from '../auth.service'
 import { RedisService } from '../../../common/redis/redis.service'
 import { SDKFinanceService } from '../../../common/sdk-finance/sdk-finance.service'
-import { type AuthResponse } from '../../../common/sdk-finance/sdk-finance.interface'
+import { CustomGraphQLError } from '../../../common/errors/custom-graphql.error'
+import { LoggerService } from '../../../logging/logger.service'
 
 describe('AuthService', () => {
   let authService: AuthService
@@ -35,6 +36,16 @@ describe('AuthService', () => {
           provide: JwtService,
           useValue: {
             sign: jest.fn(),
+          },
+        },
+        {
+          provide: LoggerService,
+          useValue: {
+            error: jest.fn(),
+            log: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            event: jest.fn(),
           },
         },
       ],
@@ -131,11 +142,22 @@ describe('AuthService', () => {
   it('should throw if SDK authentication fails (non-200 status)', async () => {
     jest.spyOn(sdkFinanceService, 'authenticateUser').mockResolvedValue({
       status: 401,
-      data: null as unknown as AuthResponse,
+      data: {
+        action: 'login',
+        authorizationToken: {
+          expiresAt: '',
+          token: '',
+        },
+        refreshToken: {
+          expiresAt: '',
+          token: '',
+        },
+        members: [],
+        maskedPhoneNumber: '',
+      },
     })
 
-    const result = await authService.login('user@test.com', 'bad-password')
-    expect(result).toBeUndefined()
+    await expect(authService.login('user@test.com', 'bad-password')).rejects.toThrow(CustomGraphQLError)
   })
 
   it('should throw if SDK response is missing authorizationToken.token', async () => {
@@ -186,14 +208,12 @@ describe('AuthService', () => {
     }
     jest.spyOn(sdkFinanceService, 'authenticateUser').mockResolvedValue(mockAuthResponseWithStatus)
 
-    const result = await authService.login('user@test.com', 'password')
-    expect(result).toBeUndefined()
+    await expect(authService.login('user@test.com', 'password')).rejects.toThrow(CustomGraphQLError)
   })
 
-  it('should handle SDKFinanceService throwing an error', async () => {
-    jest.spyOn(sdkFinanceService, 'authenticateUser').mockRejectedValue(new Error('SDK down'))
+  it('should throw CustomGraphQLError when SDKFinanceService fails', async () => {
+    jest.spyOn(sdkFinanceService, 'authenticateUser').mockRejectedValue(new CustomGraphQLError('SDK down', 502))
 
-    const result = await authService.login('user@test.com', 'password')
-    expect(result).toBeUndefined()
+    await expect(authService.login('user@test.com', 'password')).rejects.toThrow(CustomGraphQLError)
   })
 })

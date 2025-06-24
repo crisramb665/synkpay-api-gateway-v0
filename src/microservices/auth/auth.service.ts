@@ -8,6 +8,8 @@ import { type AuthResponseWithStatus } from '../../common/sdk-finance/sdk-financ
 import { type JwtPayload, type LoginResponse } from './interfaces/jwt-payload.interface'
 import { RedisService } from '../../common/redis/redis.service'
 import { hashJwt } from './utils/utils'
+import { CustomGraphQLError } from '../../common/errors/custom-graphql.error'
+import { LoggerService } from '../../logging/logger.service'
 
 @Injectable()
 export class AuthService {
@@ -15,15 +17,18 @@ export class AuthService {
     private readonly sdkFinanceService: SDKFinanceService,
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
+    private readonly logger: LoggerService,
   ) {}
 
   public async login(login: string, password: string): Promise<LoginResponse | undefined> {
     try {
       const sdkAuthResponse: AuthResponseWithStatus = await this.sdkFinanceService.authenticateUser(login, password)
-      if (!sdkAuthResponse || sdkAuthResponse.status !== 200) throw new Error('Failed to authenticate with SDK Finance')
+      if (!sdkAuthResponse || sdkAuthResponse.status !== 200)
+        throw new CustomGraphQLError('Failed to authenticate with SDK Finance', sdkAuthResponse.status)
 
       const { data } = sdkAuthResponse
-      if (!data.authorizationToken.token) throw new Error('Invalid credentials')
+      if (!data.authorizationToken.token)
+        throw new CustomGraphQLError('Invalid login credentials. Authentication required', sdkAuthResponse.status)
 
       const user = data.members[0]?.user
       const { id: userId, name, profileOrganizationId } = user
@@ -60,8 +65,13 @@ export class AuthService {
         sdkFinanceRefreshToken: data.refreshToken.token,
         expiresAt: data.authorizationToken.expiresAt,
       }
-    } catch (error) {
-      console.error('Error during login:', error)
+    } catch (error: any) {
+      this.logger.error('Error during login', error.stack, {
+        type: 'event',
+        method: 'login',
+      })
+
+      throw error
     }
   }
 
@@ -71,7 +81,8 @@ export class AuthService {
     const tokenValue = await this.redisService.getValue(redisKey)
 
     //! This is not a server error, need to fix this with refresh token implementation
-    if (!tokenValue) throw new Error('SDK Finance tokens not generated for this user.')
+    if (!tokenValue)
+      throw new CustomGraphQLError('SDK Finance session not initialized. Please authenticate first.', 401)
 
     return JSON.parse(tokenValue) as { sdkFinanceToken: string; sdkFinanceRefreshToken: string }
   }
