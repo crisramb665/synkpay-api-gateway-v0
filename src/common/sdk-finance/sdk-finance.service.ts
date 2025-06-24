@@ -96,7 +96,7 @@ export class SDKFinanceService {
   }
 
   async authenticateUser(login: string, password: string): Promise<AuthResponseWithStatus> {
-    return this.makeRequest<AuthResponse>({
+    return this.makeRequest({
       method: 'post',
       endpoint: '/v1/authorization',
       data: { login, password },
