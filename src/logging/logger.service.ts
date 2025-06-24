@@ -3,6 +3,7 @@ import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common'
 import * as winston from 'winston'
 import { transports as winstonTransports } from 'winston'
 import { ConfigService } from '@nestjs/config'
+import { ConfigKey } from 'src/config/enums'
 
 export interface LogContext {
   correlationId?: string
@@ -18,20 +19,20 @@ export class LoggerService implements NestLoggerService {
   constructor(private readonly configService: ConfigService) {
     const transports: winston.transport[] = []
 
-    if (this.configService.get('LOG_TO_CONSOLE') !== 'false') {
+    if (this.configService.get(ConfigKey.LOG_TO_CONSOLE) !== 'false') {
       transports.push(new winstonTransports.Console())
     }
 
-    if (this.configService.get('LOG_TO_FILE') === 'true') {
+    if (this.configService.get(ConfigKey.LOG_TO_FILE) === 'true') {
       transports.push(
         new winstonTransports.File({
-          filename: this.configService.get('LOG_FILE_PATH') || 'logs/app.log',
+          filename: this.configService.get(ConfigKey.LOG_FILE_PATH) || 'logs/app.log',
         }),
       )
     }
 
     this.logger = winston.createLogger({
-      level: this.configService.get('LOG_LEVEL') || 'info',
+      level: this.configService.get(ConfigKey.LOG_LEVEL) || 'info',
       format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
       transports,
     })

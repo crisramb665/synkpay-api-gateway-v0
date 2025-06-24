@@ -26,7 +26,7 @@ export class SDKFinanceService {
     private readonly logger: LoggerService,
   ) {
     this.baseUrl = this.configService.get<string>(ConfigKey.SDK_FINANCE_BASE_URL)
-    if (!this.baseUrl) throw new Error('SDK Finance base URL is not defined in the configuration')
+    if (!this.baseUrl) throw new CustomGraphQLError('Missing SDK Finance base URL in environment configuration.', 500)
   }
 
   public withToken(accessToken: string): AuthenticatedSDKFinanceClient {
@@ -96,31 +96,11 @@ export class SDKFinanceService {
   }
 
   async authenticateUser(login: string, password: string): Promise<AuthResponseWithStatus> {
-    try {
-      if (!this.baseUrl) throw new CustomGraphQLError('Missing SDK Finance base URL in environment configuration.', 500)
-
-      const response = await firstValueFrom(
-        this.httpService.post(`${this.baseUrl}/v1/authorization`, { login, password }),
-        // Handling errors via external try/catch block instead of catchError inside .pipe()
-        // to allow consistent usage of CustomGraphQLError and centralized logging with LoggerService.
-      )
-
-      const { status, data } = response
-      if (status !== 200)
-        throw new CustomGraphQLError(`SDK Finance authentication failed with status code: ${status}`, status)
-
-      return { status, data }
-    } catch (error: any) {
-      const status = error?.response?.status || 502
-      const message = error?.response?.data?.message || error?.message || 'Authentication with SDK Finance failed.'
-
-      this.logger.error(message, error.stack, {
-        method: 'authenticateUser',
-        type: 'event',
-      })
-
-      throw new CustomGraphQLError(message, status)
-    }
+    return this.makeRequest<AuthResponse>({
+      method: 'post',
+      endpoint: '/v1/authorization',
+      data: { login, password },
+    })
   }
 
   async refreshToken(sdkFinanceRefreshToken: string): Promise<AuthResponseWithStatus> {

@@ -14,8 +14,6 @@ import config from '../config/config'
 import { GqlThrottlerGuard } from '../rate-limit/rate-limit-custom.guard'
 import { AuthModule } from '../microservices/auth/auth.module'
 import { formatGraphQLError } from '../graphql/format-error'
-import { TestErrorResolver } from '../../test/test-error/test-error.resolver'
-import { TestErrorService } from '../../test/test-error/test-error.service'
 import { LoggerService } from '../logging/logger.service'
 import { CorrelationIdMiddleware } from '../logging/middleware/correlation.middleware'
 import { GraphQLLoggingInterceptor } from '../logging/graphql-logging.interceptor'
@@ -62,8 +60,6 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
   ],
   controllers: [],
   providers: [
-    TestErrorResolver,
-    TestErrorService,
     LoggerService,
     {
       provide: APP_INTERCEPTOR,
