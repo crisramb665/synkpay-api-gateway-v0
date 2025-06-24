@@ -2,24 +2,15 @@
 import { HttpService } from '@nestjs/axios'
 import { ConfigService } from '@nestjs/config'
 import { Injectable } from '@nestjs/common'
-import { firstValueFrom } from 'rxjs'
+import { firstValueFrom, from } from 'rxjs'
+import { AxiosRequestConfig, AxiosResponse } from 'axios'
 
 /** local imports */
-import { AuthResponse, type AuthResponseWithStatus } from './sdk-finance.interface'
+import { AuthResponse, type MakeRequestParams, type RegistrationParams, type AuthResponseWithStatus } from './sdk-finance.interface'
 import { CustomGraphQLError } from '../../common/errors/custom-graphql.error'
 import { LoggerService } from '../../logging/logger.service'
+import { ConfigKey } from '../../config/enums'
 
-interface RegistrationParams {
-  login: string
-  role: string
-  legalType: string
-  administrator: {
-    firstName: string
-    lastName: string
-    email: string
-    phone: string
-  }
-}
 @Injectable()
 export class SDKFinanceService {
   private readonly baseUrl: string | undefined
@@ -29,7 +20,48 @@ export class SDKFinanceService {
     private readonly httpService: HttpService,
     private readonly logger: LoggerService,
   ) {
-    this.baseUrl = this.configService.get<string>('SDK_FINANCE_BASE_URL')
+    this.baseUrl = this.configService.get<string>(ConfigKey.SDK_FINANCE_BASE_URL)
+    if (!this.baseUrl) throw new Error('SDK Finance base URL is not defined in the configuration')
+  }
+
+  public withToken(accessToken: string): AuthenticatedSDKFinanceClient {
+    return new AuthenticatedSDKFinanceClient(this, accessToken)
+  }
+
+  public async makeRequest<T>({
+    method,
+    endpoint,
+    data,
+    headers,
+  }: MakeRequestParams): Promise<{ status: number; data: T }> {
+    if (!this.baseUrl) throw new Error('SDK Finance base URL is not defined')
+
+    try {
+      const config: AxiosRequestConfig = {
+        method,
+        url: `${this.baseUrl}${endpoint}`,
+        data,
+        ...(headers ? { headers } : {}),
+      }
+
+      const response: AxiosResponse = await firstValueFrom(
+        this.httpService.request(config).pipe(
+          catchError((error: any) => {
+            throw new Error(`SDK Finance request failed: ${error?.response?.data?.message || error.message || error}`)
+          }),
+        ),
+      )
+
+      const { status, data: responseData } = response
+      return { status, data: responseData as T }
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('SDK Finance error:', error.message)
+      } else {
+        console.error('SDK Finance unknown error:', error)
+      }
+      throw error
+    }
   }
 
   async registration({ login, role, legalType, administrator }: RegistrationParams) {
@@ -44,7 +76,7 @@ export class SDKFinanceService {
           administrator,
         }),
       )
-      return response.data
+      return response.data //TODO: Work with OPT validations
     } catch (error: any) {
       const status = error?.response?.status || 502
       const message = error?.response?.data?.message || error?.message || 'Registration with SDK Finance failed.'
@@ -84,5 +116,32 @@ export class SDKFinanceService {
 
       throw new CustomGraphQLError(message, status)
     }
+    return this.makeRequest({ method: 'post', endpoint: '/v1/authorization', data: { login, password } })
+  }
+
+  async refreshToken(sdkFinanceRefreshToken: string): Promise<AuthResponseWithStatus> {
+    return this.makeRequest({
+      method: 'put',
+      endpoint: '/v1/authorization',
+      data: { refreshToken: sdkFinanceRefreshToken },
+    })
+  }
+}
+
+export class AuthenticatedSDKFinanceClient {
+  constructor(
+    private readonly sdkFinanceService: SDKFinanceService,
+    private readonly sdkFinanceAccessToken: string,
+  ) {}
+
+  async deleteAccessTokenAndLogout() {
+    return this.sdkFinanceService.makeRequest({
+      method: 'delete',
+      endpoint: '/v1/authorization',
+      data: {},
+      headers: {
+        Authorization: `Bearer ${this.sdkFinanceAccessToken}`,
+      },
+    })
   }
 }

@@ -16,7 +16,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - .:/app
+      - ./src:/app/src:cached
       - /app/node_modules
     env_file:
       - .env ##This is for dev enviroment only. Do not use in production
