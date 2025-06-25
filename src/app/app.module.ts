@@ -1,6 +1,6 @@
 /** npm imports */
 import { join } from 'path'
-import { MiddlewareConsumer, Module, NestModule, MiddlewareConsumer, NestModule } from '@nestjs/common'
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { GraphQLModule } from '@nestjs/graphql'
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
@@ -76,6 +76,6 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(CorrelationIdMiddleware).forRoutes('*')
+    consumer.apply(CorrelationIdMiddleware, HeaderSanitizerMiddleware, RequestValidatorMiddleware).forRoutes('*')
   }
 }
