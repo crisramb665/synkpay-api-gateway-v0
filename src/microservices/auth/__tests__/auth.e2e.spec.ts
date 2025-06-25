@@ -141,7 +141,7 @@ describe('AuthResolver (e2e)', () => {
       `,
       })
 
-    expect(replayResponse.body.errors[0].message).toContain('Unauthorized or expired refresh token')
+    expect(replayResponse.body.errors[0].message).toContain('Invalid or replayed refresh token')
   })
 
   it('should revoke tokens on logout and prevent future access', async () => {
@@ -187,6 +187,6 @@ describe('AuthResolver (e2e)', () => {
       `,
       })
 
-    expect(protectedResponse.body.errors[0].message).toContain('No session data found') //! Fix this error message from the implementation
+    expect(protectedResponse.body.errors[0].message).toContain('Session has expired or does not exist') //! Fix this error message from the implementation
   })
 })

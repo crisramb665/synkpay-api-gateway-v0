@@ -1,12 +1,12 @@
 /** npm imports */
 import { join } from 'path'
-import { Module } from '@nestjs/common'
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { GraphQLModule } from '@nestjs/graphql'
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default'
 import { ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler'
-import { APP_GUARD } from '@nestjs/core'
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 
 /** local imports */
 import { HealthModule } from '../health/health.module'
@@ -14,8 +14,9 @@ import config from '../config/config'
 import { GqlThrottlerGuard } from '../rate-limit/rate-limit-custom.guard'
 import { AuthModule } from '../microservices/auth/auth.module'
 import { formatGraphQLError } from '../graphql/format-error'
-import { TestErrorResolver } from '../../test/test-error/test-error.resolver'
-import { TestErrorService } from '../../test/test-error/test-error.service'
+import { LoggerService } from '../logging/logger.service'
+import { CorrelationIdMiddleware } from '../logging/middleware/correlation.middleware'
+import { GraphQLLoggingInterceptor } from '../logging/graphql-logging.interceptor'
 
 const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 
@@ -32,7 +33,12 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
       graphiql: false,
       playground: false,
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
-      context: ({ req, res }) => ({ req, res }),
+      context: ({ req, res }) => ({
+        req,
+        res,
+        correlationId: req['correlationId'],
+        userId: req?.user?.id,
+      }),
       formatError: formatGraphQLError,
     }),
     ThrottlerModule.forRootAsync({
@@ -54,12 +60,20 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
   ],
   controllers: [],
   providers: [
-    TestErrorResolver,
-    TestErrorService,
+    LoggerService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: GraphQLLoggingInterceptor,
+    },
     {
       provide: APP_GUARD,
       useClass: GqlThrottlerGuard,
     },
   ],
+  exports: [LoggerService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*')
+  }
+}
