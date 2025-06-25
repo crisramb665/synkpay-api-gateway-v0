@@ -63,6 +63,7 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
   controllers: [],
   providers: [
     LoggerService,
+    RequestValidatorMiddleware, //! Using it as a provider to inject logger service
     {
       provide: APP_INTERCEPTOR,
       useClass: GraphQLLoggingInterceptor,

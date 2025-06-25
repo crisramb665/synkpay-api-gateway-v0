@@ -275,7 +275,7 @@ export class AuthService {
     try {
       return value ? (JSON.parse(value) as T) : null
     } catch (err) {
-      console.warn('Failed to parse JSON from Redis', err)
+      this.logger.error('Failed to parse JSON from Redis', err.message || err)
       return null
     }
   }

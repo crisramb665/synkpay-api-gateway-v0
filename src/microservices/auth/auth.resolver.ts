@@ -92,7 +92,7 @@ export class AuthResolver {
 
       return revoked
     } catch (error) {
-      console.error('Error during logout:', error)
+      this.logger.error('Error during logout:', error)
       throw new CustomGraphQLError('Logout failed', 500, false, true)
     }
   }

@@ -1,72 +1,59 @@
 /** npm imports */
-import { INestApplication, MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
-import { Test } from '@nestjs/testing'
-import * as request from 'supertest'
+import { BadRequestException } from '@nestjs/common'
+import { Request, Response, NextFunction } from 'express'
 
 /** local imports */
 import { RequestValidatorMiddleware } from '../middleware/request-validator.middleware'
-import * as express from 'express'
 
-@Module({})
-class TestMiddlewareModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestValidatorMiddleware).forRoutes('*')
-  }
+const mockLogger = {
+  warn: jest.fn(),
+  debug: jest.fn(),
+  log: jest.fn(),
+  error: jest.fn(),
 }
 
+const createRequest = (headers = {}, body = {}): Partial<Request> => ({
+  headers,
+  body,
+  url: '/graphql',
+})
+
+const createResponse = (): Partial<Response> => ({})
+
 describe('RequestValidatorMiddleware', () => {
-  let app: INestApplication
+  let middleware: RequestValidatorMiddleware
+  let req: Partial<Request>
+  let res: Partial<Response>
+  let next: NextFunction
 
-  beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [TestMiddlewareModule],
-    }).compile()
-
-    app = moduleRef.createNestApplication()
-    // Add a test route for checking middleware behavior
-    app.use('/graphql', express.json(), (req, res) => {
-      res.status(200).json({ message: 'OK' })
-    })
-
-    await app.init()
-  })
-
-  afterAll(async () => {
-    await app.close()
+  beforeEach(() => {
+    middleware = new RequestValidatorMiddleware(mockLogger as any)
+    res = createResponse()
+    next = jest.fn()
+    jest.clearAllMocks()
   })
 
   it('should allow a valid request', () => {
-    return request(app.getHttpServer())
-      .post('/graphql')
-      .set('Content-Type', 'application/json')
-      .set('Authorization', 'Bearer token')
-      .send({ query: 'hello' })
-      .expect(200)
+    req = createRequest({ 'content-length': '1000' }, { data: 'safe' })
+    expect(() => middleware.use(req as Request, res as Response, next)).not.toThrow()
+    expect(next).toHaveBeenCalled()
   })
 
   it('should block large payloads', () => {
-    const largePayload = 'x'.repeat(1024 * 101)
-
-    return request(app.getHttpServer())
-      .post('/graphql')
-      .set('Content-Type', 'application/json')
-      .send({ data: largePayload })
-      .expect(400)
+    req = createRequest({ 'content-length': '200000' }, { data: 'too large' })
+    expect(() => middleware.use(req as Request, res as Response, next)).toThrow(BadRequestException)
+    expect(mockLogger.error).toHaveBeenCalledWith('Payload too large: 200000 bytes')
   })
 
-  it('should block suspicious content in body', () => {
-    return request(app.getHttpServer())
-      .post('/graphql')
-      .set('Content-Type', 'application/json')
-      .send({ query: 'db.users.find({ "$ne": null })' })
-      .expect(400)
+  it('should block suspicious patterns in body', () => {
+    req = createRequest({ 'content-length': '100' }, { query: 'eval(something)' })
+    expect(() => middleware.use(req as Request, res as Response, next)).toThrow(BadRequestException)
+    expect(mockLogger.error).toHaveBeenCalledWith('Suspicious payload detected: {"query":"eval(something)"}')
   })
 
-  it('should block disallowed headers', () => {
-    return request(app.getHttpServer())
-      .post('/graphql')
-      .set('X-Forwarded-For', '1.2.3.4')
-      .send({ query: 'hello' })
-      .expect(400)
+  it('should block forbidden headers', () => {
+    req = createRequest({ 'x-forwarded-for': '1.2.3.4', 'content-length': '100' }, { data: 'safe' })
+    expect(() => middleware.use(req as Request, res as Response, next)).toThrow(BadRequestException)
+    expect(mockLogger.error).toHaveBeenCalledWith('Disallowed header detected: x-forwarded-for')
   })
 })
