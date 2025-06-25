@@ -18,7 +18,6 @@ type Query {
   getHealth: String!
   securedQuery: String!
   securedQuery2: SdkFinanceTokenResponseDto!
-  testServiceError: String!
 }
 
 type RefreshTokenResponseDto {

@@ -135,6 +135,107 @@ The global guard uses the client's IP address to track and throttle requests. Th
 Requests that exceed the allowed rate will receive a 429 Too Many Requests error.
 
 ---
+## 📚 Logging & Error Management
+
+This section documents the structured logging and centralized error handling system implemented in the SynkPay API Gateway.
+
+It covers two main components:
+- **Structured Logging & Monitoring** – Using a custom `LoggerService`, correlation ID middleware, and interceptors.
+- **Centralized Error Management** – Using `CustomGraphQLError` and consistent GraphQL error formatting.
+
+---
+
+### 📦 Structured Logging & Monitoring
+
+LoggerService -> A reusable and injectable service wrapping Winston, configured via `ConfigService`. Outputs fully structured JSON logs supporting:
+
+- `correlationId` (generated per request)
+- `userId`, `operationName`, `operationType`
+- `type`: distinguishes between `"request"` and `"event"`
+- Log levels: `info`, `warn`, `error`, `debug`, `event`
+
+Logging behavior is controlled by the following environment variables (via `ConfigService`):
+
+| Variable            | Description                              | Default        |
+|---------------------|------------------------------------------|----------------|
+| `LOG_LEVEL`         | Log level (e.g. info, debug, error)      | `info`         |
+| `LOG_TO_CONSOLE`    | Whether to log to console                | `true`         |
+| `LOG_TO_FILE`       | Whether to write logs to a file          | `false`        |
+| `LOG_FILE_PATH`     | Path for file-based logging              | `logs/app.log` |
+
+#### 🧩 Middleware: CorrelationIdMiddleware
+
+Registers a unique `correlationId` per request. Adds it to:
+- `req['correlationId']` (for interceptors, context, etc.)
+- Response header `x-correlation-id`
+
+Located at: `src/logging/middleware/correlation-id.middleware.ts`
+
+#### 🧩 GraphQL Logging Interceptor
+
+Registered globally via `APP_INTERCEPTOR`. Logs:
+- Operation name and type
+- Duration
+- `correlationId` and `userId`
+- Error trace if applicable
+
+#### 🔁 HttpLoggerService (Outbound Requests)
+
+Custom wrapper over `HttpService`. Used for microservice communication.
+
+- Automatically injects `correlationId` and `userId` into headers
+- Logs method, URL, status, duration or errors
+- Used instead of direct `httpService.request(...)` calls
+
+---
+
+### ✅ Logger Tests
+
+| Component                   | Test File                                           |
+|----------------------------|-----------------------------------------------------|
+| `LoggerService`            | `logger.service.spec.ts`                            |
+| `HttpLoggerService`        | `http-logger.service.spec.ts`                       |
+| `GraphQLLoggingInterceptor`| `graphql-logging.interceptor.spec.ts`               |
+
+---
+
+### ❗ Centralized Error Management
+
+Purpose -> Improve control and visibility over runtime errors across the API Gateway.
+
+#### 🧱 `CustomGraphQLError`
+
+Custom class extending `GraphQLError` with:
+- `extensions.code`: numeric code
+- `extensions.success`: boolean
+- `extensions.timestamp`: included if `includeTimestamp = true`
+
+Used for consistent error output structure across all GraphQL layers.
+
+#### ⚙️ `formatGraphQLError`
+
+Registered in `GraphQLModule` to normalize all outgoing error responses. Ensures that:
+- All GraphQL errors follow the same shape
+- Only safe fields are exposed to clients
+
+#### 🧪 TestErrorResolver & TestErrorService
+
+Implemented to validate the entire error handling pipeline:
+- `TestErrorResolver`: throws controlled test exceptions
+- `TestErrorService`: triggers service-level nested errors
+- Confirms that all errors are formatted and surfaced correctly
+
+---
+
+### 🧪 Error Management Tests
+
+| Component              | Purpose                                  |
+|------------------------|------------------------------------------|
+| `TestErrorResolver`    | GraphQL operation that throws test error |
+| `TestErrorService`     | Triggers nested service-level exceptions |
+| `formatGraphQLError`   | Validates output structure and mapping   |
+
+---
 
 ## 📬 Contact
 

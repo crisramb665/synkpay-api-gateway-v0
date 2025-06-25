@@ -15,4 +15,10 @@ export default () => ({
   REDIS_PORT: parseInt(process.env.REDIS_PORT ?? '6379', 10),
   ENABLE_HTTPS: process.env.ENABLE_HTTPS === 'true',
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? '*',
+
+  // Logging Configuration
+  LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+  LOG_TO_CONSOLE: process.env.LOG_TO_CONSOLE !== 'false',
+  LOG_TO_FILE: process.env.LOG_TO_FILE === 'true',
+  LOG_FILE_PATH: process.env.LOG_FILE_PATH || 'logs/app.log',
 })

@@ -13,6 +13,7 @@ import { RedisService } from '../../common/redis/redis.service'
 import { hashJwt } from './utils/utils'
 import { CustomGraphQLError } from '../../common/errors/custom-graphql.error'
 import type { RefreshValue, SessionValue } from './interfaces/service.interface'
+import { LoggerService } from '../../logging/logger.service'
 
 @Injectable()
 export class AuthService {
@@ -21,6 +22,7 @@ export class AuthService {
     private readonly sdkFinanceService: SDKFinanceService,
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
+    private readonly logger: LoggerService,
   ) {}
 
   public async getTokens(login: string, password: string): Promise<LoginResponse | undefined> {
@@ -66,8 +68,13 @@ export class AuthService {
         apiGatewayRefreshToken,
         expiresAt: data.authorizationToken.expiresAt,
       }
-    } catch (error) {
-      console.error('Error during login:', error)
+    } catch (error: any) {
+      this.logger.error('Error during login', error.stack, {
+        type: 'event',
+        method: 'login',
+      })
+
+      throw error
       throw new CustomGraphQLError('Login failed. Please check your credentials and try again.', 401, false, true)
     }
   }
@@ -145,7 +152,10 @@ export class AuthService {
         expiresAt: sdkFinanceTokenExpiresAt,
       }
     } catch (error: any) {
-      console.error('Error refreshing token:', error)
+      this.logger.error('Error refreshing token', error.stack, {
+        type: 'event',
+        method: 'refreshToken',
+      })
       throw new CustomGraphQLError('Invalid or replayed refresh token', 401)
     }
   }
@@ -210,8 +220,11 @@ export class AuthService {
       ])
 
       return true
-    } catch (error) {
-      console.error('Error revoking tokens:', error)
+    } catch (error: any) {
+      this.logger.error('Error revoking tokens', error.stack, {
+        method: 'revokeTokens',
+        type: 'event',
+      })
       return false
     }
   }

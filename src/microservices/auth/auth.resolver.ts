@@ -14,12 +14,14 @@ import { parseExpirationTime } from './utils/utils'
 import { ContextReq } from './interfaces/jwt-payload.interface'
 import { RefreshTokenResponseDto } from './dto/refresh-token-response.dto'
 import { CustomGraphQLError } from '../../common/errors/custom-graphql.error'
+import { LoggerService } from '../../logging/logger.service'
 
 @Resolver()
 export class AuthResolver {
   constructor(
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
+    private readonly logger: LoggerService,
   ) {}
 
   @Mutation(() => LoginResponseDto)
@@ -31,7 +33,7 @@ export class AuthResolver {
     try {
       const result = await this.authService.getTokens(login, password)
       if (!result || !result.apiGatewayAccessToken)
-        throw new Error('Login failed. Please check your credentials and try again.')
+        throw new CustomGraphQLError('Invalid login credentials. Authentication required.', 401)
 
       context.res.cookie('refreshToken', result.apiGatewayRefreshToken, {
         httpOnly: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
@@ -42,8 +44,12 @@ export class AuthResolver {
 
       return result
     } catch (error) {
-      console.error('Error during login:', error)
-      throw new Error('Login failed. Please check your credentials and try again.')
+      this.logger.error('Error during login', (error as Error).stack, {
+        operationName: 'login',
+        service: 'api-gateway',
+        type: 'request',
+      })
+      throw new CustomGraphQLError('Invalid login credentials. Authentication required.', 401)
     }
   }
 
@@ -111,7 +117,8 @@ export class AuthResolver {
       return { sdkFinanceAccessToken }
     } catch (error: any) {
       //! This is not a server error, need to fix this with refresh token implementation
-      throw new Error('SDK Finance has expired or was revoked. Please re-authenticate', error)
+      const status = error?.response?.status || 500
+      throw new CustomGraphQLError('SDK Finance token has expired or was revoked. Please re-authenticate', status) //! This is not a server error
     }
   }
 }

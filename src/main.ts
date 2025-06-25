@@ -9,6 +9,7 @@ import helmet from 'helmet'
 import { AppModule } from './app/app.module'
 import { ConfigKey } from './config/enums'
 import corsConfig from './security/cors/corsConfig'
+import { LoggerService } from './logging/logger.service'
 
 async function bootstrap(): Promise<void> {
   try {
@@ -28,6 +29,7 @@ async function bootstrap(): Promise<void> {
     })
 
     const configService = app.get(ConfigService)
+    const logger = new LoggerService(configService)
     const port: number = configService.get<number>(ConfigKey.PORT) || 5000
     const protocol: 'https' | 'http' = enableHttps ? 'https' : 'http'
 
@@ -64,8 +66,8 @@ async function bootstrap(): Promise<void> {
 
     await app.listen(port)
 
-    console.log(`🚀🚀🚀 Application is running on: ${protocol}://localhost:${port}`)
-    console.log(`🚀🚀🚀 Application with GraphQL is running on: ${protocol}://localhost:${port}/graphql`)
+    logger.log(`🚀🚀🚀 Application is running on: ${protocol}://localhost:${port}`)
+    logger.log(`🚀🚀🚀 Application with GraphQL is running on: ${protocol}://localhost:${port}/graphql`)
   } catch (error: unknown) {
     if (error instanceof Error) console.error('Error during bootstrap:', error.message)
     else console.error('Error during bootstrap:', error)

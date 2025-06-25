@@ -65,8 +65,6 @@ describe('GqlThrottlerGuard', () => {
       .fn()
       .mockResolvedValue('ip:123.456.789.000')
 
-    console.log('this.throttlers after init:', (guard as unknown as { throttlers: any[] }).throttlers)
-
     // Initialize the guard
     await guard.onModuleInit()
   })
@@ -94,10 +92,6 @@ describe('GqlThrottlerGuard', () => {
   // Unit test No. 2 -> Allow request under the rate limit.
   it('should allow request under the rate limit', async () => {
     const context = mockContext()
-
-    // Verify handler is not undefined
-    const handlerFn = context.getHandler()
-    console.log('handler name:', handlerFn?.name)
 
     // MOCK GraphQL context with IP
     jest.spyOn(GqlExecutionContext, 'create').mockReturnValueOnce({

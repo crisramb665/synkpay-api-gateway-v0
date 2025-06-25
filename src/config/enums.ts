@@ -15,4 +15,10 @@ export enum ConfigKey {
   REDIS_PORT = 'REDIS_PORT',
   ENABLE_HTTPS = 'ENABLE_HTTPS',
   CORS_ORIGIN = 'CORS_ORIGIN',
+
+  // Logging Configuration
+  LOG_LEVEL = 'LOG_LEVEL',
+  LOG_TO_CONSOLE = 'LOG_TO_CONSOLE',
+  LOG_TO_FILE = 'LOG_TO_FILE',
+  LOG_FILE_PATH = 'LOG_FILE_PATH',
 }

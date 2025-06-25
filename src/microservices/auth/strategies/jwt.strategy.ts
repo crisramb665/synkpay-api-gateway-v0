@@ -9,6 +9,7 @@ import type { JwtPayload } from '../interfaces/jwt-payload.interface'
 import { ConfigKey } from '../../../config/enums'
 import { RedisService } from '../../../common/redis/redis.service'
 import { hashJwt } from '../utils/utils'
+import { CustomGraphQLError } from '../../../common/errors/custom-graphql.error'
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -17,7 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly redisService: RedisService,
   ) {
     const publicKey = configService.get<string>(ConfigKey.JWT_PUBLIC_KEY_DEV)
-    if (!publicKey) throw new Error('JWT public key is not defined in environment variables')
+    if (!publicKey) throw new CustomGraphQLError('Missing JWT public key in environment configuration.', 500)
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -34,10 +35,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const redisKey = `auth:session:${payload.sub}:access`
     const sessionData = await this.redisService.getValue(redisKey)
-    if (!sessionData) throw new Error('No session data found') //! Change this error message later
+    if (!sessionData) throw new CustomGraphQLError('Session has expired or does not exist. Please log in again.', 401)
 
     const parsedSessionData = JSON.parse(sessionData)
-    if (parsedSessionData.jwtHash !== jwtHash) throw new Error('JWT has been revoked or is invalid.')
+    if (parsedSessionData.jwtHash !== jwtHash)
+      throw new CustomGraphQLError('JWT has expired or was revoked. Please re-authenticate', 401)
 
     return {
       sub: payload.sub,
