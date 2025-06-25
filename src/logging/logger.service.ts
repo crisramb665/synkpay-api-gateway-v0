@@ -36,8 +36,9 @@ export class LoggerService implements NestLoggerService {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.colorize(),
-        winston.format.printf(({ timestamp, level, message }) => {
-          return `${timestamp} [${level}]: ${message}`
+        winston.format.printf(({ timestamp, level, message, ...context }) => {
+          const contextString = Object.keys(context).length > 0 ? `${JSON.stringify(context)}` : ''
+          return `${timestamp} [${level}]: ${message} ${contextString !== '' ? ` with context: ${contextString}` : ''}`
         }),
       ),
       transports,
@@ -51,7 +52,6 @@ export class LoggerService implements NestLoggerService {
       message,
       ...context,
     }
-    // return `$}`
   }
 
   log(message: string, context?: LogContext) {
