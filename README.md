@@ -126,6 +126,8 @@ The application relies on the following environment variables. See .env.example 
 | `JWT_REFRESH_EXPIRE_TIME` | Refresh token expiration (e.g., 24h)              |
 | `REDIS_HOST`              | Redis hostname                                    |
 | `REDIS_PORT`              | Redis port                                        |
+| `ENABLE_HTTPS`            | Enable/disable HTTPS for environments                                       |
+| `CORS_ORIGIN`             | CORS origin                                      |
 | `LOG_LEVEL`               | Log level (info, error, debug, etc.)              |
 | `LOG_TO_CONSOLE`          | Enable/disable console logs                       |
 | `LOG_TO_FILE`             | Enable/disable log file writing                   |
@@ -143,6 +145,22 @@ The following diagrams illustrate the API Gateway's role within the Synk Pay eco
 ![Core Services & Data Layer](./docs/architecture/core-services-and-data-layer.png)
 
 ---
+
+### 🔐 Security Features
+
+This API Gateway includes built-in security layers:
+
+- **CORS configuration** to restrict origin access.
+- **Helmet integration** for setting secure HTTP headers.
+- **HTTPS support** with self-signed certificates for local development.
+- **Request validation middleware** that blocks large payloads, suspicious patterns, and disallowed headers.
+- **Header sanitization middleware** to remove or override potentially insecure response headers.
+
+Unit tests are included for critical middleware. Run them with:
+
+```bash
+yarn test src/security/__tests__/request-validator.middleware.spec.ts
+```
 
 ## 🚦 Rate Limiting
 
