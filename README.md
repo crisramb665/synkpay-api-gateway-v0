@@ -1,17 +1,20 @@
 # SynkPay API Gateway
 
-A lightweight API gateway built with [NestJS](https://nestjs.com/) to orchestrate and manage HTTP traffic between multiple microservices. It acts as a centralized entry point, integrating authentication, proxy routing, and third-party services like SDK.finance.
+A lightweight API gateway built with [NestJS](https://nestjs.com/) to orchestrate and manage HTTP traffic between multiple microservices. It acts as a centralized entry point, integrating authentication, proxy routing, and third-party services like SDK.finance. It exposes a single GraphQL endpoint for client interactions.
 
 ---
 
 ## 🚀 Tech Stack
 
 - **Framework:** NestJS
+- **API Type:** GraphQL
 - **Authentication:** JWT
-- **API Documentation:** Swagger (OpenAPI)
+- **Rate Limiting:** Throttler (GraphQL-compatible)
+- **Logging:** Winston
+- **Cache & Token Store:** Redis
 - **Deployment:** Docker
 - **Third-Party Integration:** [SDK.finance](https://sdk.finance/)
-- **Upcoming Features:** GraphQL, KrakenD
+- **Upcoming Features:** KrakenD
 
 ---
 
@@ -22,10 +25,18 @@ A lightweight API gateway built with [NestJS](https://nestjs.com/) to orchestrat
 ├── src
 │   ├── common/
 │   │   └── sdk-finance/
+│   │   └── redis/
+│   │   └── errors/
 │   ├── config/
+│   ├── graphql/
 │   ├── health/
 │   ├── microservices/
+│   ├── logging/
+│   └── rate-limit/
 ├── test/
+├── docs/
+│ └── architecture/
+├── .env.example
 ├── README.md
 ├── package.json
 ├── tsconfig.json
@@ -94,24 +105,42 @@ yarn test:cov
 
 ---
 
-## 📄 API Docs (Swagger)
-
-Once the app is running, access the API docs at:
-
-```
-http://localhost:4000/api
-```
-
----
-
 ## 📦 Environment Variables
 
-Example `.env` file:
+The application relies on the following environment variables. See .env.example for a working template.
 
-```env
-PORT=4000
-JWT_SECRET=your_jwt_secret
+```env.example
+| Variable                  | Description                                       |
+| ------------------------- | ------------------------------------------------- |
+| `PORT`                    | Port used by the app                              |
+| `NODE_ENV`                | Environment mode (e.g., development, production)  |
+| `API_KEY`                 | Internal secret key for secured operations        |
+| `RATE_LIMIT_GLOBAL`       | Max requests per window for rate limiting         |
+| `RATE_LIMIT_WINDOW_MS`    | Window duration in milliseconds for rate limiting |
+| `SDK_FINANCE_BASE_URL`    | Base URL for SDK.finance integration              |
+| `JWT_PRIVATE_KEY_DEV`     | Dev private key for JWT (ask TL)                  |
+| `JWT_PUBLIC_KEY_DEV`      | Dev public key for JWT (ask TL)                   |
+| `JWT_PRIVATE_KEY_PROD`    | Prod private key for JWT (ask TL)                 |
+| `JWT_PUBLIC_KEY_PROD`     | Prod public key for JWT (ask TL)                  |
+| `JWT_EXPIRE_TIME`         | Access token expiration (e.g., 5h)                |
+| `JWT_REFRESH_EXPIRE_TIME` | Refresh token expiration (e.g., 24h)              |
+| `REDIS_HOST`              | Redis hostname                                    |
+| `REDIS_PORT`              | Redis port                                        |
+| `LOG_LEVEL`               | Log level (info, error, debug, etc.)              |
+| `LOG_TO_CONSOLE`          | Enable/disable console logs                       |
+| `LOG_TO_FILE`             | Enable/disable log file writing                   |
+| `LOG_FILE_PATH`           | Path to log file if enabled                       |
+
 ```
+---
+
+## 🧭 Architecture Overview
+
+The following diagrams illustrate the API Gateway's role within the Synk Pay ecosystem.
+
+![Ecosystem Overview](./docs/architecture/ecosystem-overview.png)
+![Layered System Architecture](./docs/architecture/container-diagram.png)
+![Core Services & Data Layer](./docs/architecture/core-services-and-data-layer.png)
 
 ---
 
@@ -121,27 +150,33 @@ Rate limiting is implemented using a custom `GqlThrottlerGuard` based on NestJS'
 
 🔧 Configuration:
 
-Limits are defined globally via environment variables: Currently, default values ​​are seen until the final real values ​​are available.
+Limits are defined globally via environment variables using default values until the final real values are available:
 
-```env
+```env.example
 RATE_LIMIT_GLOBAL=100           # Max requests per window
 RATE_LIMIT_WINDOW_MS=60000      # Window duration in milliseconds
 
+```
 These values are injected using ThrottlerModule.forRootAsync() inside AppModule.
 
 ⚙️ How It Works
-The global guard uses the client's IP address to track and throttle requests. The logic is extended to work with GraphQL using GqlExecutionContext to extract req and res objects. To override the global rate limit for specific GraphQL resolvers, use the @Throttle() decorator
 
-Requests that exceed the allowed rate will receive a 429 Too Many Requests error.
+- **IP-based throttling with GraphQL context support via GqlExecutionContext.**
+- **Can override defaults via @Throttle() on resolvers.**
+- **Returns HTTP 429 on limit exceeded.**
 
 ---
+
+### ✅ Rate Limiting Unit Tests
+
+| Component            | Test File                    | Description                                                                |
+|----------------------|------------------------------|----------------------------------------------------------------------------|
+| `GqlThrottlerGuard`  | `rate-limit.guard.spec.ts`   | Tests GraphQL context extraction, IP-based tracking, and rate limit logic  |
+| `@Throttle` Decorator| `rate-limit.guard.spec.ts`   | Validates that metadata for `limit` and `ttl` is correctly attached        |
+
+---
+
 ## 📚 Logging & Error Management
-
-This section documents the structured logging and centralized error handling system implemented in the SynkPay API Gateway.
-
-It covers two main components:
-- **Structured Logging & Monitoring** – Using a custom `LoggerService`, correlation ID middleware, and interceptors.
-- **Centralized Error Management** – Using `CustomGraphQLError` and consistent GraphQL error formatting.
 
 ---
 
@@ -149,27 +184,16 @@ It covers two main components:
 
 LoggerService -> A reusable and injectable service wrapping Winston, configured via `ConfigService`. Outputs fully structured JSON logs supporting:
 
-- `correlationId` (generated per request)
-- `userId`, `operationName`, `operationType`
+- `correlationId`, `userId`, `operationName`, `operationType`
 - `type`: distinguishes between `"request"` and `"event"`
 - Log levels: `info`, `warn`, `error`, `debug`, `event`
 
-Logging behavior is controlled by the following environment variables (via `ConfigService`):
-
-| Variable            | Description                              | Default        |
-|---------------------|------------------------------------------|----------------|
-| `LOG_LEVEL`         | Log level (e.g. info, debug, error)      | `info`         |
-| `LOG_TO_CONSOLE`    | Whether to log to console                | `true`         |
-| `LOG_TO_FILE`       | Whether to write logs to a file          | `false`        |
-| `LOG_FILE_PATH`     | Path for file-based logging              | `logs/app.log` |
+Logging behavior is controlled by environment variables (via `ConfigService`): default values ​​defined in the .env.example.
 
 #### 🧩 Middleware: CorrelationIdMiddleware
 
-Registers a unique `correlationId` per request. Adds it to:
-- `req['correlationId']` (for interceptors, context, etc.)
-- Response header `x-correlation-id`
-
-Located at: `src/logging/middleware/correlation-id.middleware.ts`
+- Registers a unique `correlationId` per request.
+- Sets x-correlation-id header in responses
 
 #### 🧩 GraphQL Logging Interceptor
 
@@ -189,13 +213,13 @@ Custom wrapper over `HttpService`. Used for microservice communication.
 
 ---
 
-### ✅ Logger Tests
+### ✅ Logger Unit Tests
 
-| Component                   | Test File                                           |
-|----------------------------|-----------------------------------------------------|
-| `LoggerService`            | `logger.service.spec.ts`                            |
-| `HttpLoggerService`        | `http-logger.service.spec.ts`                       |
-| `GraphQLLoggingInterceptor`| `graphql-logging.interceptor.spec.ts`               |
+| Component                  | Test File                               | Description                                                                |
+|----------------------------|-----------------------------------------|----------------------------------------------------------------------------|
+| `LoggerService`            | `logger.service.spec.ts`                | Verifies that log messages are correctly formatted, structured, and routed |
+| `HttpLoggerService`        | `http-logger.service.spec.ts`           | Ensures outbound HTTP logs include metadata like correlationId and errors  |
+| `GraphQLLoggingInterceptor`| `graphql-logging.interceptor.spec.ts`   | Tests that GraphQL operations are intercepted and logged with context info |
 
 ---
 
@@ -218,22 +242,74 @@ Registered in `GraphQLModule` to normalize all outgoing error responses. Ensures
 - All GraphQL errors follow the same shape
 - Only safe fields are exposed to clients
 
-#### 🧪 TestErrorResolver & TestErrorService
+---
 
-Implemented to validate the entire error handling pipeline:
-- `TestErrorResolver`: throws controlled test exceptions
-- `TestErrorService`: triggers service-level nested errors
-- Confirms that all errors are formatted and surfaced correctly
+## 🧩 Artifact-Producing Modules
+
+The following modules generate outputs relevant for auditing, monitoring, and compliance:
+
+| Module                    | Purpose                         | Output Format   | Path                                 |
+| ------------------------- | ------------------------------- | --------------- | ------------------------------------ |
+| `LoggerService`           | Structured app logging          | JSON logs       | `src/logging/logger.service.ts`      |
+| `CorrelationIdMiddleware` | Unique ID per request           | Header + log    | `src/logging/middleware/`            |
+| `HttpLoggerService`       | Logs external service calls     | JSON logs       | `src/logging/http-logger.service.ts` |
+| `GqlThrottlerGuard`       | Rate limiting protection        | 429 + log entry | `src/rate-limit/`                    |
+| `CustomGraphQLError`      | Normalized GraphQL error output | JSON error      | `src/errors/`                        |
+
+
+Output logs are stored in console or file (depending on env vars) and support centralized logging (e.g., ELK, CloudWatch).
 
 ---
 
-### 🧪 Error Management Tests
+## 🧰 Module Documentation Checklist
 
-| Component              | Purpose                                  |
-|------------------------|------------------------------------------|
-| `TestErrorResolver`    | GraphQL operation that throws test error |
-| `TestErrorService`     | Triggers nested service-level exceptions |
-| `formatGraphQLError`   | Validates output structure and mapping   |
+Use this checklist when documenting new modules in the API Gateway:
+
+ Describe purpose and functionality
+
+ Document inputs/outputs (headers, logs, etc.)
+
+ Specify location in codebase
+
+ Reference compliance relevance (if applicable)
+
+ Include example usage or config (optional)
+
+✅ Current implemented module: Authentication
+
+Stores users, roles, and permissions.
+
+Designed to persist data in PostgreSQL.
+
+DB integration is pending, but schema and logic are in place for role-based access control.
+
+---
+
+## 📜 Compliance Mapping
+
+This section maps key regulatory requirements to their implementation status within the Synk Pay platform.
+
+| Standard / Regulation     | Requirement                     | Status (SDK / Gateway)  | Implementation Summary                           |
+|---------------------------|---------------------------------|-------------------------|--------------------------------------------------|
+| **MiCA**                  | Fund Segregation                | ✅ Supported (SDK)      | Double-entry ledger for client fund isolation    |
+| **AMLD6 / MiCA**          | 24h AML Monitoring              | ⚠️ Partial (SDK)        | Synk Pay must integrate Chainalysis KYT          |
+| **DORA**                  | Incident Reporting (< 4h)       | ❌ Not Covered          | Needs alert pipeline (e.g. PagerDuty)            |
+| **DORA TLPT**             | Penetration Testing             | ❌ Not Covered          | External red teaming required                    |
+| **NIS2 / ISO 27001**      | Operational Resilience          | ⚠️ Partial              | Gateway + infra: mTLS, WAF, segmentation         |
+| **PSD2 / SCA**            | Strong Auth (2FA/WebAuthn)      | ✅ Supported (2FA only) | Keycloak-based auth; WebAuthn optional           |
+| **GDPR**                  | EU Data Residency + ARCO        | ✅ Supported            | Data hosted in EU; ARCO handled by app layer     |
+| **WCAG / EN301549**       | Accessibility Compliance        | ❌ Not Covered          | Frontend must ensure accessibility               |
+| **OWASP SAMM / CIS**      | Secure SDLC                     | ⚠️ Partial              | Logging, testing, linting in Gateway             |
+| **Vendor Risk (DORA)**    | SLA & Contingency Management    | ⚠️ Partial              | Requires SLA enforcement and escrow options      |
+| **Business Continuity**   | Disaster Recovery / DR          | ⚠️ Partial              | Multi-region setup pending                       |
+| **MiCA Art. 71**          | Ledger Integrity                | ✅ Supported (SDK)      | Double-entry with auditability; hashing optional |
+| **MiCA**                  | Immutable Logs                  | ❌ Not Native           | Use S3 WORM storage for logs                     |
+| **ENISA**                 | Key Management (HSM)            | ❌ Not Native           | HSM integration pending (CloudHSM recommended)   |
+| **BoL / XBRL**            | Regulatory Reporting            | ❌ Not Covered          | Custom reports needed using SDK exports          |
+| **ISO 37002**             | Whistleblower Channel           | ❌ Not Covered          | Requires external secure channel                 |
+
+
+> 💡 This mapping is maintained as part of Synk Pay’s commitment to regulatory readiness. While SDK.finance covers many structural requirements, operational compliance (e.g., logging, authentication, incident response) is implemented and extended at the API Gateway and infrastructure levels.
 
 ---
 
