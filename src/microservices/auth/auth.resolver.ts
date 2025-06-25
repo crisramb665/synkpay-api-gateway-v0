@@ -63,7 +63,6 @@ export class AuthResolver {
 
     const result = await this.authService.refreshToken(refreshToken)
 
-    // TODO Must enable CORS to test this in the browser
     context?.res.cookie('refreshToken', result.apiGatewayRefreshToken, {
       httpOnly: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',
       secure: this.configService.get<string>(ConfigKey.NODE_ENV) === 'production',

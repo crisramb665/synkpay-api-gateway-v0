@@ -79,7 +79,6 @@ export class AuthService {
     }
   }
 
-  //TODO: FIX ERROR CODES
   public async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
     try {
       const decoded = this.jwtService.verify<JwtPayload>(refreshToken, {
