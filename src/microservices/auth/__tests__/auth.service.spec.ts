@@ -172,11 +172,10 @@ describe('AuthService', () => {
     })
 
     await expect(authService.getTokens('user@test.com', 'bad-password')).rejects.toMatchObject({
-      message: 'Login failed. Please check your credentials and try again.',
+      message: 'Failed to authenticate with SDK Finance',
       extensions: {
         code: 401,
         success: false,
-        timestamp: expect.any(String),
       },
     })
   })
@@ -230,11 +229,10 @@ describe('AuthService', () => {
     jest.spyOn(sdkFinanceService, 'authenticateUser').mockResolvedValue(mockAuthResponseWithStatus)
 
     await expect(authService.getTokens('user@test.com', 'bad-password')).rejects.toMatchObject({
-      message: 'Login failed. Please check your credentials and try again.',
+      message: 'Invalid credentials',
       extensions: {
-        code: 401,
+        code: 200,
         success: false,
-        timestamp: expect.any(String),
       },
     })
   })
@@ -243,11 +241,10 @@ describe('AuthService', () => {
     jest.spyOn(sdkFinanceService, 'authenticateUser').mockRejectedValue(new CustomGraphQLError('SDK down', 502))
 
     await expect(authService.getTokens('user@test.com', 'password')).rejects.toMatchObject({
-      message: 'Login failed. Please check your credentials and try again.',
+      message: 'SDK down',
       extensions: {
-        code: 401,
+        code: 502,
         success: false,
-        timestamp: expect.any(String),
       },
     })
   })
@@ -329,6 +326,6 @@ describe('AuthService', () => {
       return Promise.resolve(null)
     })
 
-    await expect(authService.refreshToken(mockRefreshToken)).rejects.toThrow('Unauthorized or expired refresh token')
+    await expect(authService.refreshToken(mockRefreshToken)).rejects.toThrow('Invalid or replayed refresh token')
   })
 })

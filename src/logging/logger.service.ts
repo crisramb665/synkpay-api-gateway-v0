@@ -3,7 +3,7 @@ import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common'
 import * as winston from 'winston'
 import { transports as winstonTransports } from 'winston'
 import { ConfigService } from '@nestjs/config'
-import { ConfigKey } from 'src/config/enums'
+import { ConfigKey } from '../config/enums'
 
 export interface LogContext {
   correlationId?: string

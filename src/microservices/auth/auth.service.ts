@@ -152,7 +152,10 @@ export class AuthService {
         expiresAt: sdkFinanceTokenExpiresAt,
       }
     } catch (error: any) {
-      console.error('Error refreshing token:', error)
+      this.logger.error('Error refreshing token', error.stack, {
+        type: 'event',
+        method: 'refreshToken',
+      })
       throw new CustomGraphQLError('Invalid or replayed refresh token', 401)
     }
   }
@@ -217,8 +220,11 @@ export class AuthService {
       ])
 
       return true
-    } catch (error) {
-      console.error('Error revoking tokens:', error)
+    } catch (error: any) {
+      this.logger.error('Error revoking tokens', error.stack, {
+        method: 'revokeTokens',
+        type: 'event',
+      })
       return false
     }
   }
