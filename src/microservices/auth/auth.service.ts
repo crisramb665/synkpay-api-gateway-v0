@@ -79,7 +79,6 @@ export class AuthService {
     }
   }
 
-  //TODO: FIX ERROR CODES
   public async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
     try {
       const decoded = this.jwtService.verify<JwtPayload>(refreshToken, {
@@ -275,7 +274,7 @@ export class AuthService {
     try {
       return value ? (JSON.parse(value) as T) : null
     } catch (err) {
-      console.warn('Failed to parse JSON from Redis', err)
+      this.logger.error('Failed to parse JSON from Redis', err.message || err)
       return null
     }
   }

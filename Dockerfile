@@ -23,6 +23,6 @@ COPY --from=builder /app/dist ./dist
 
 USER node
 
-EXPOSE 4000
+EXPOSE 5000
 
 CMD ["node", "dist/main.js"]

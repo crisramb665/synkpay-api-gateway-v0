@@ -1,6 +1,6 @@
 /** npm imports */
 import { join } from 'path'
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common'
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { GraphQLModule } from '@nestjs/graphql'
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
@@ -17,6 +17,8 @@ import { formatGraphQLError } from '../graphql/format-error'
 import { LoggerService } from '../logging/logger.service'
 import { CorrelationIdMiddleware } from '../logging/middleware/correlation.middleware'
 import { GraphQLLoggingInterceptor } from '../logging/graphql-logging.interceptor'
+import { HeaderSanitizerMiddleware } from '../security/middleware/header-sanitizer.middleware'
+import { RequestValidatorMiddleware } from '../security/middleware/request-validator.middleware'
 
 const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 
@@ -61,6 +63,7 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
   controllers: [],
   providers: [
     LoggerService,
+    RequestValidatorMiddleware, //! Using it as a provider to inject logger service
     {
       provide: APP_INTERCEPTOR,
       useClass: GraphQLLoggingInterceptor,
@@ -74,6 +77,6 @@ const SCHEMA_PATH = join(process.cwd(), 'src/graphql/schema.gql')
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(CorrelationIdMiddleware).forRoutes('*')
+    consumer.apply(CorrelationIdMiddleware, HeaderSanitizerMiddleware, RequestValidatorMiddleware).forRoutes('*')
   }
 }

@@ -33,7 +33,14 @@ export class LoggerService implements NestLoggerService {
 
     this.logger = winston.createLogger({
       level: this.configService.get(ConfigKey.LOG_LEVEL) || 'info',
-      format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.colorize(),
+        winston.format.printf(({ timestamp, level, message, ...context }) => {
+          const contextString = Object.keys(context).length > 0 ? `${JSON.stringify(context)}` : ''
+          return `${timestamp} [${level}]: ${message} ${contextString !== '' ? ` with context: ${contextString}` : ''}`
+        }),
+      ),
       transports,
     })
   }
