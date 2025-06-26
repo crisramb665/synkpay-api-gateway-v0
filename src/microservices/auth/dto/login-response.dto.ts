@@ -4,10 +4,13 @@ import { ObjectType, Field } from '@nestjs/graphql'
 @ObjectType()
 export class LoginResponseDto {
   @Field()
-  apiGatewayAccessToken: string
+  status: number
 
   @Field()
-  apiGatewayRefreshToken: string
+  accessToken: string
+
+  @Field()
+  refreshToken: string
 
   @Field()
   expiresAt: string

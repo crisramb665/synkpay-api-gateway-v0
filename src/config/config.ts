@@ -21,4 +21,6 @@ export default () => ({
   LOG_TO_CONSOLE: process.env.LOG_TO_CONSOLE !== 'false',
   LOG_TO_FILE: process.env.LOG_TO_FILE === 'true',
   LOG_FILE_PATH: process.env.LOG_FILE_PATH || 'logs/app.log',
+
+  AUTH_PROXY_SERVICE_BASE_URL: process.env.AUTH_PROXY_SERVICE_BASE_URL ?? 'http://localhost:4000',
 })

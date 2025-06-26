@@ -2,16 +2,10 @@
 import { ObjectType, Field } from '@nestjs/graphql'
 
 @ObjectType()
-export class RefreshTokenResponseDto {
+export class LogoutResponseDto {
   @Field()
   status: number
 
   @Field()
-  accessToken: string
-
-  @Field()
-  refreshToken: string
-
-  @Field()
-  expiresAt: string
+  revoked: boolean
 }
