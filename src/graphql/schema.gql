@@ -3,27 +3,33 @@
 # ------------------------------------------------------
 
 type LoginResponseDto {
-  apiGatewayAccessToken: String!
-  apiGatewayRefreshToken: String!
+  accessToken: String!
   expiresAt: String!
+  refreshToken: String!
+  status: Float!
+}
+
+type LogoutResponseDto {
+  revoked: Boolean!
+  status: Float!
 }
 
 type Mutation {
   login(login: String!, password: String!): LoginResponseDto!
-  logout: Boolean!
+  logout: LogoutResponseDto!
   refreshToken(refreshToken: String): RefreshTokenResponseDto!
 }
 
 type Query {
   getHealth: String!
-  securedQuery: String!
-  securedQuery2: SdkFinanceTokenResponseDto!
+  securedQuery: SdkFinanceTokenResponseDto!
 }
 
 type RefreshTokenResponseDto {
-  apiGatewayAccessToken: String!
-  apiGatewayRefreshToken: String!
+  accessToken: String!
   expiresAt: String!
+  refreshToken: String!
+  status: Float!
 }
 
 type SdkFinanceTokenResponseDto {

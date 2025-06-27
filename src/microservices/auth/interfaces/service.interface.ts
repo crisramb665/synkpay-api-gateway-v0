@@ -10,3 +10,16 @@ export interface RefreshValue {
   jwtRefreshHash: string
   jwtRefreshJtiHash: string
 }
+
+export interface MakeRequestInterface {
+  method: 'get' | 'post' | 'put' | 'patch' | 'delete'
+  endpoint: string
+  data?: any
+  params?: any
+  headers?: Record<string, string>
+}
+
+export type ApiResponse<T> = {
+  status: number
+  data: T
+}

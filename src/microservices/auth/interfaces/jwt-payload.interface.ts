@@ -12,8 +12,9 @@ export interface ContextReq extends IncomingMessage {
   user: JwtPayload
 }
 export interface LoginResponse {
-  apiGatewayAccessToken: string
-  apiGatewayRefreshToken: string
+  status: number
+  accessToken: string
+  refreshToken: string
   expiresAt: string
 }
 

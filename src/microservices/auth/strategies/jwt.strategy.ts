@@ -39,7 +39,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const parsedSessionData = JSON.parse(sessionData)
     if (parsedSessionData.jwtHash !== jwtHash)
-      throw new CustomGraphQLError('JWT has expired or was revoked. Please re-authenticate', 401)
+      throw new CustomGraphQLError('JWT is wrong, has expired or was revoked. Please re-authenticate', 401)
 
     return {
       sub: payload.sub,
