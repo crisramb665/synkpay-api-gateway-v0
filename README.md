@@ -117,13 +117,9 @@ The application relies on the following environment variables. See .env.example 
 | `API_KEY`                 | Internal secret key for secured operations        |
 | `RATE_LIMIT_GLOBAL`       | Max requests per window for rate limiting         |
 | `RATE_LIMIT_WINDOW_MS`    | Window duration in milliseconds for rate limiting |
-| `SDK_FINANCE_BASE_URL`    | Base URL for SDK.finance integration              |
-| `JWT_PRIVATE_KEY_DEV`     | Dev private key for JWT (ask TL)                  |
 | `JWT_PUBLIC_KEY_DEV`      | Dev public key for JWT (ask TL)                   |
 | `JWT_PRIVATE_KEY_PROD`    | Prod private key for JWT (ask TL)                 |
 | `JWT_PUBLIC_KEY_PROD`     | Prod public key for JWT (ask TL)                  |
-| `JWT_EXPIRE_TIME`         | Access token expiration (e.g., 5h)                |
-| `JWT_REFRESH_EXPIRE_TIME` | Refresh token expiration (e.g., 24h)              |
 | `REDIS_HOST`              | Redis hostname                                    |
 | `REDIS_PORT`              | Redis port                                        |
 | `ENABLE_HTTPS`            | Enable/disable HTTPS for environments                                       |

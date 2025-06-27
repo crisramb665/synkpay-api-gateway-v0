@@ -17,12 +17,12 @@ type LogoutResponseDto {
 type Mutation {
   login(login: String!, password: String!): LoginResponseDto!
   logout: LogoutResponseDto!
-  refreshToken(inputRefreshToken: String): RefreshTokenResponseDto!
+  refreshToken(refreshToken: String): RefreshTokenResponseDto!
 }
 
 type Query {
   getHealth: String!
-  securedQuery2: SdkFinanceTokenResponseDto!
+  securedQuery: SdkFinanceTokenResponseDto!
 }
 
 type RefreshTokenResponseDto {

@@ -9,11 +9,12 @@ import { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { ConfigKey } from '../../config/enums'
 import type { RefreshTokenResponse, LoginResponse } from './interfaces/jwt-payload.interface'
 import { CustomGraphQLError } from '../../common/errors/custom-graphql.error'
-import { ApiResponse, MakeRequestInterface } from './interfaces/service.interface'
+import type { ApiResponse, MakeRequestInterface } from './interfaces/service.interface'
 
 @Injectable()
 export class AuthProxyService {
   private readonly authProxyServiceBaseUrl: string | undefined
+  private readonly API_VERSION: string = '/v1'
 
   constructor(
     private readonly configService: ConfigService,
@@ -53,36 +54,35 @@ export class AuthProxyService {
     }
   }
 
-  public async getTokens(login: string, password: string): Promise<LoginResponse | undefined> {
-    return (await this.makeRequest<LoginResponse>({ method: 'post', endpoint: 'v1/login', data: { login, password } }))
-      .data
-  }
-
-  public async refreshToken(inputRefreshToken: string): Promise<RefreshTokenResponse> {
-    return (
-      await this.makeRequest<RefreshTokenResponse>({
-        method: 'post',
-        endpoint: 'v1/refresh-token',
-        data: { refreshToken: inputRefreshToken },
-      })
-    ).data
-  }
-
-  public async revokeTokens(userId: string): Promise<{ status: number; revoked: boolean }> {
-    const response = await this.makeRequest<{ status: number; revoked: boolean }>({
+  public async getTokens(login: string, password: string): Promise<ApiResponse<LoginResponse> | undefined> {
+    return await this.makeRequest<LoginResponse>({
       method: 'post',
-      endpoint: 'v1/logout',
+      endpoint: `${this.API_VERSION}/login`,
+      data: { login, password },
+    })
+  }
+
+  public async refreshToken(inputRefreshToken: string): Promise<ApiResponse<RefreshTokenResponse>> {
+    return await this.makeRequest<RefreshTokenResponse>({
+      method: 'post',
+      endpoint: `${this.API_VERSION}/refresh-token`,
+      data: { refreshToken: inputRefreshToken },
+    })
+  }
+
+  public async revokeTokens(userId: string): Promise<ApiResponse<{ status: number; revoked: boolean }>> {
+    return await this.makeRequest<{ status: number; revoked: boolean }>({
+      method: 'post',
+      endpoint: `${this.API_VERSION}/logout`,
       data: { userId },
     })
-
-    return { ...response, revoked: response.status === 204 }
   }
 
   //TODO: Remove this later
   public async getSdkFinanceTokens(userId: string) {
     const response = await this.makeRequest<any>({
       method: 'get',
-      endpoint: 'v1/sdk-finance',
+      endpoint: `${this.API_VERSION}/sdk-tokens`,
       params: { userId },
     })
 

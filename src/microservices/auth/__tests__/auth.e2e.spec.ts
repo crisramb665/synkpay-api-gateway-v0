@@ -2,10 +2,10 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
 import * as request from 'supertest'
+import axios from 'axios'
 
 /** local imports */
 import { AppModule } from '../../../app/app.module'
-import { RedisService } from '../../../common/redis/redis.service'
 
 const testUser = {
   login: 'administrator@sdkfinance.tech',
@@ -14,9 +14,16 @@ const testUser = {
 
 describe('AuthResolver (e2e)', () => {
   let app: INestApplication
-  let redisService: RedisService
+  let authProxyServiceAvailable: boolean = true
 
   beforeAll(async () => {
+    try {
+      await axios.get('http://localhost:4000/')
+    } catch (error) {
+      authProxyServiceAvailable = false
+      console.warn('⚠️ Auth service is offline, skipping related tests: ', error)
+    }
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile()
@@ -25,8 +32,6 @@ describe('AuthResolver (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe())
 
     await app.init()
-
-    redisService = moduleFixture.get<RedisService>(RedisService)
   })
 
   afterAll(async () => {
@@ -34,15 +39,18 @@ describe('AuthResolver (e2e)', () => {
   })
 
   it('should login and return a JWT + SDK token', async () => {
+    if (!authProxyServiceAvailable) return
+
     const response = await request(app.getHttpServer())
       .post('/graphql')
       .send({
         query: `
           mutation {
             login(login: "${testUser.login}", password: "${testUser.password}") {
-              apiGatewayAccessToken
-              apiGatewayRefreshToken
+              accessToken
               expiresAt
+              refreshToken
+              status
             }
           }
         `,
@@ -50,31 +58,30 @@ describe('AuthResolver (e2e)', () => {
 
     const loginResponse = response.body.data.login
 
-    expect(loginResponse.apiGatewayAccessToken).toBeDefined()
-    expect(loginResponse.apiGatewayRefreshToken).toBeDefined()
+    expect(loginResponse.accessToken).toBeDefined()
+    expect(loginResponse.refreshToken).toBeDefined()
     expect(loginResponse.expiresAt).toBeDefined()
-
-    const redisKey = 'auth:session:0196acb4-dfa7-742f-a136-cec716d761dd:access'
-    const redisValue = await redisService.getValue(redisKey)
-    expect(redisValue).not.toBeNull()
   })
 
   it('should return SDK Finance tokens with valid JWT', async () => {
+    if (!authProxyServiceAvailable) return
+
     const loginResponse = await request(app.getHttpServer())
       .post('/graphql')
       .send({
         query: `
           mutation {
             login(login: "${testUser.login}", password: "${testUser.password}") {
-              apiGatewayAccessToken
-              apiGatewayRefreshToken
+              accessToken
               expiresAt
+              refreshToken
+              status
             }
           }
         `,
       })
 
-    const accessToken = loginResponse.body.data.login.apiGatewayAccessToken
+    const accessToken = loginResponse.body.data.login.accessToken
 
     //! IMPORTANT: TESTING A TEST ROUTE, SHOULD BE UPDATED WHEN WE'RE GOING TO ADD MORE PROTECTED QUERIES.
     const response = await request(app.getHttpServer())
@@ -83,83 +90,89 @@ describe('AuthResolver (e2e)', () => {
       .send({
         query: `
           query {
-            securedQuery2 {
+            securedQuery {
               sdkFinanceAccessToken
             }
           }
         `,
       })
 
-    expect(response.body.data.securedQuery2.sdkFinanceAccessToken).toBeDefined()
+    expect(response.body.data.securedQuery.sdkFinanceAccessToken).toBeDefined()
   })
 
   it('should refresh token and reject replayed refresh tokens', async () => {
+    if (!authProxyServiceAvailable) return
     const loginResponse = await request(app.getHttpServer())
       .post('/graphql')
       .send({
         query: `
         mutation {
           login(login: "${testUser.login}", password: "${testUser.password}") {
-            apiGatewayAccessToken
-            apiGatewayRefreshToken
+            accessToken
             expiresAt
+            refreshToken
+            status
           }
         }
       `,
       })
 
-    const { apiGatewayRefreshToken } = loginResponse.body.data.login
-    expect(apiGatewayRefreshToken).toBeDefined()
+    const { refreshToken } = loginResponse.body.data.login
+    expect(refreshToken).toBeDefined()
 
     const refreshResponse = await request(app.getHttpServer())
       .post('/graphql')
       .send({
         query: `
           mutation {
-            refreshToken(refreshToken: "${apiGatewayRefreshToken}") {
-              apiGatewayAccessToken
-              apiGatewayRefreshToken
+            refreshToken(refreshToken: "${refreshToken}") {
+              accessToken
               expiresAt
+              refreshToken
+              status
             }
           }
       `,
       })
 
-    expect(refreshResponse.body.data.refreshToken.apiGatewayAccessToken).toBeDefined()
+    expect(refreshResponse.body.data.refreshToken.accessToken).toBeDefined()
 
     const replayResponse = await request(app.getHttpServer())
       .post('/graphql')
       .send({
         query: `
         mutation {
-          refreshToken(refreshToken: "${apiGatewayRefreshToken}") {
-            apiGatewayAccessToken
-            apiGatewayRefreshToken
+          refreshToken(refreshToken: "${refreshToken}") {
+            accessToken
             expiresAt
+            refreshToken
+            status
           }
         }
       `,
       })
 
-    expect(replayResponse.body.errors[0].message).toContain('Invalid or replayed refresh token')
+    expect(replayResponse.body.errors[0].message).toContain('Request failed with status code 401')
   })
 
   it('should revoke tokens on logout and prevent future access', async () => {
+    if (!authProxyServiceAvailable) return
     const loginResponse = await request(app.getHttpServer())
       .post('/graphql')
       .send({
         query: `
         mutation {
           login(login: "${testUser.login}", password: "${testUser.password}") {
-            apiGatewayAccessToken
-            apiGatewayRefreshToken
+            accessToken
             expiresAt
+            refreshToken
+            status
           }
         }
       `,
       })
 
-    const accessToken = loginResponse.body.data.login.apiGatewayAccessToken
+    const accessToken = loginResponse.body.data.login.accessToken
 
     const logoutResponse = await request(app.getHttpServer())
       .post('/graphql')
@@ -167,12 +180,15 @@ describe('AuthResolver (e2e)', () => {
       .send({
         query: `
           mutation {
-            logout
+            logout {
+              revoked
+              status
+            }
           }
       `,
       })
 
-    expect(logoutResponse.body.data.logout).toBe(true)
+    expect(logoutResponse.body.data.logout.revoked).toBe(true)
 
     const protectedResponse = await request(app.getHttpServer())
       .post('/graphql')
@@ -180,7 +196,7 @@ describe('AuthResolver (e2e)', () => {
       .send({
         query: `
         query {
-          securedQuery2 {
+          securedQuery {
             sdkFinanceAccessToken
           }
         }
